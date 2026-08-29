@@ -23,6 +23,7 @@ from reportlab.lib.fonts import addMapping
 import io
 import datetime as dt
 import shutil
+import subprocess
 
 # ===== CONFIG =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
@@ -51,7 +52,11 @@ TRANSLATIONS = {
         "choose_language": "🌐 Choose your language:",
         "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD).",
         "defects_list": "🔍 Found defects:",
-        "generate_order": "📄 Generate order"
+        "generate_order": "📄 Generate order",
+        "classify_prompt": "📸 Classify this photo:",
+        "classify_success": "✅ Photo added to {category}",
+        "classify_skipped": "⏭️ Photo skipped",
+        "classify_rejected": "❌ Photo rejected and deleted"
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -69,7 +74,11 @@ TRANSLATIONS = {
         "choose_language": "🌐 Выберите язык:",
         "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД).",
         "defects_list": "🔍 Найдены замечания:",
-        "generate_order": "📄 Сформировать предписание"
+        "generate_order": "📄 Сформировать предписание",
+        "classify_prompt": "📸 Классифицируйте это фото:",
+        "classify_success": "✅ Фото добавлено в категорию {category}",
+        "classify_skipped": "⏭️ Фото пропущено",
+        "classify_rejected": "❌ Фото отклонено и удалено"
     }
 }
 
@@ -78,6 +87,8 @@ CATEGORY_DATA = [
     {
         "keyword": "01_otsutstvuyut_birki",
         "etalon_prefix": "birki_etalon",
+        "label_ru": "Бирки",
+        "label_en": "Labels",
         "text": {
             "en": "⚠️ Missing cable/equipment labels (tags).",
             "ru": "⚠️ Отсутствуют бирки на оборудовании (кабелях, муфтах, аппаратах)."
@@ -90,6 +101,8 @@ CATEGORY_DATA = [
     {
         "keyword": "02_zadelka_prohodok",
         "etalon_prefix": "prohodki_etalon",
+        "label_ru": "Проходки",
+        "label_en": "Penetrations",
         "text": {
             "en": "⚠️ Gaps in cable penetrations not sealed.",
             "ru": "⚠️ Не выполнена заделка проходок (зазоры в трубах, коробах, проёмах)."
@@ -102,6 +115,8 @@ CATEGORY_DATA = [
     {
         "keyword": "03_zazemlenie_ne_vypolneno",
         "etalon_prefix": "zazemlenie_etalon",
+        "label_ru": "Заземление",
+        "label_en": "Earthing",
         "text": {
             "en": "⚠️ Earthing not provided or does not meet standards.",
             "ru": "⚠️ Не выполнено заземление (или не соответствует нормам)."
@@ -114,6 +129,8 @@ CATEGORY_DATA = [
     {
         "keyword": "04_shpilki_lotka_ne_srezany",
         "etalon_prefix": "shpilki_etalon",
+        "label_ru": "Шпильки",
+        "label_en": "Studs",
         "text": {
             "en": "⚠️ Cable tray studs not trimmed.",
             "ru": "⚠️ Шпильки лотка не срезаны (опасность травматизма и повреждения кабелей)."
@@ -126,6 +143,8 @@ CATEGORY_DATA = [
     {
         "keyword": "05_oksidy_rzhavchina",
         "etalon_prefix": "oksidy_etalon",
+        "label_ru": "Окислы",
+        "label_en": "Oxidation",
         "text": {
             "en": "⚠️ Oxidation and rust on equipment contacts.",
             "ru": "⚠️ Окислы и ржавчина на контактах оборудования."
@@ -138,6 +157,8 @@ CATEGORY_DATA = [
     {
         "keyword": "06_otsutstvie_shemy",
         "etalon_prefix": "shema_etalon",
+        "label_ru": "Схема",
+        "label_en": "Diagram",
         "text": {
             "en": "⚠️ Single-line diagram missing inside the cabinet.",
             "ru": "⚠️ Отсутствует однолинейная схема внутри шкафа."
@@ -233,18 +254,21 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
     ])
 
-def get_review_keyboard():
-    keyboard = [
-        [InlineKeyboardButton("🏷️ Бирки", callback_data="review_birki")],
-        [InlineKeyboardButton("⛓️ Заземление", callback_data="review_zazemlenie")],
-        [InlineKeyboardButton("🔌 Проходки", callback_data="review_prohodki")],
-        [InlineKeyboardButton("🔩 Шпильки", callback_data="review_shpilki")],
-        [InlineKeyboardButton("🧪 Окислы", callback_data="review_oksidy")],
-        [InlineKeyboardButton("📄 Схема", callback_data="review_shema")],
-        [InlineKeyboardButton("❌ Отклонить", callback_data="review_reject")],
-        [InlineKeyboardButton("⏭️ Пропустить", callback_data="review_skip")]
-    ]
+def get_classify_keyboard(lang):
+    keyboard = []
+    for cat in CATEGORY_DATA:
+        label = cat["label_ru"] if lang == "ru" else cat["label_en"]
+        callback = f"classify_{cat['keyword']}"
+        keyboard.append([InlineKeyboardButton(label, callback_data=callback)])
+    keyboard.append([InlineKeyboardButton("⏭️ Пропустить", callback_data="classify_skip")])
+    keyboard.append([InlineKeyboardButton("❌ Отклонить", callback_data="classify_reject")])
     return InlineKeyboardMarkup(keyboard)
+
+def get_category_by_keyword(keyword):
+    for cat in CATEGORY_DATA:
+        if cat["keyword"] == keyword:
+            return cat
+    return None
 
 # ===== PDF GENERATION =====
 def generate_pdf_report(report_data, chat_id, lang):
@@ -332,6 +356,17 @@ def download_and_extract_etalons():
         zip_ref.extractall(".")
     os.remove("etalons.zip")
     print("✅ Etalons ready.")
+
+def rebuild_index():
+    """Перестраивает индекс FAISS."""
+    print("🔄 Перестраиваю индекс...")
+    try:
+        subprocess.run(["python", "index_builder.py"], check=True)
+        print("✅ Индекс перестроен.")
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка перестроения индекса: {e}")
+        return False
 
 # ===== INDEX, MODEL =====
 def load_index():
@@ -428,12 +463,13 @@ async def handle_photo(update, context):
         os.remove(user_path)
 
         emb = np.array([emb]).astype('float32')
-        distances, indices = index.search(emb, 3)
+        distances, indices = index.search(emb, 3)  # ищем 3 самых похожих
 
         if len(indices[0]) == 0 or indices[0][0] == -1:
             await update.message.reply_text(t['no_match'])
             return
 
+        # Сохраняем фото в review (для последующей классификации)
         base_dir = os.getcwd()
         review_dir = os.path.join(base_dir, "review")
         os.makedirs(review_dir, exist_ok=True)
@@ -443,6 +479,7 @@ async def handle_photo(update, context):
         await file.download_to_drive(review_path)
         print(f"✅ Фото сохранено в review: {review_path}")
 
+        # Собираем уникальные замечания (до 3)
         unique_defects = []
         seen = set()
         for idx in indices[0]:
@@ -459,12 +496,14 @@ async def handle_photo(update, context):
             await update.message.reply_text(t['no_match'])
             return
 
+        # Формируем ответ
         response = t['defects_list'] + "\n"
         for i, defect in enumerate(unique_defects, 1):
             response += f"{i}. {defect['text']}\n"
             if defect.get('normative'):
                 response += f"   {t['standard']} {defect['normative']}\n"
 
+        # Сохраняем замечания в сессию для предписания
         if 'report_data' not in context.user_data:
             context.user_data['report_data'] = []
         for defect in unique_defects:
@@ -474,6 +513,7 @@ async def handle_photo(update, context):
                 'photo_path': review_path
             })
 
+        # Отправляем эталон (первое найденное)
         etalon_path = find_etalon(unique_defects[0].get("etalon_prefix"))
         if etalon_path and os.path.exists(etalon_path):
             with open(etalon_path, 'rb') as f:
@@ -514,85 +554,53 @@ async def button_callback(update, context):
         t_new = TRANSLATIONS[new_lang]
         await query.edit_message_text(t_new['language_set'])
 
-    elif query.data.startswith("review_"):
-        # Обработка кнопок классификации в /review
-        action = query.data.split("_")[1]
-        # Получаем текущий список фото в review
-        base_dir = os.getcwd()
-        review_dir = os.path.join(base_dir, "review")
-        if not os.path.exists(review_dir):
-            await query.edit_message_text("📭 Папка review не найдена.")
+    elif query.data.startswith("classify_"):
+        # Обработка классификации из review
+        action = query.data.split("_", 1)[1]
+        # Получаем текущее фото из контекста (храним список фото для классификации)
+        if 'review_photos' not in context.user_data or not context.user_data['review_photos']:
+            await query.edit_message_text("❌ Нет фото для классификации.")
             return
 
-        # Ищем первое фото в review
-        photo_files = []
-        for f in os.listdir(review_dir):
-            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
-                photo_files.append(os.path.join(review_dir, f))
-        if not photo_files:
-            await query.edit_message_text("📭 В папке review нет фото.")
-            return
-
-        photo_path = photo_files[0]
-        filename = os.path.basename(photo_path)
-
+        photo_path = context.user_data['review_photos'].pop(0)
         if action == "skip":
-            await query.edit_message_text("⏭️ Пропущено. Следующее фото...")
-            # Показываем следующее фото
-            photo_files.pop(0)
-            if photo_files:
-                next_path = photo_files[0]
-                with open(next_path, 'rb') as f:
-                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
-            else:
-                await query.message.reply_text("✅ Все фото обработаны.")
-            return
-
+            # Пропускаем — оставляем в review
+            await query.edit_message_text(t['classify_skipped'])
         elif action == "reject":
-            os.remove(photo_path)
-            await query.edit_message_text("❌ Фото отклонено и удалено.")
-            # Показываем следующее
-            photo_files.pop(0)
-            if photo_files:
-                next_path = photo_files[0]
-                with open(next_path, 'rb') as f:
-                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
-            else:
-                await query.message.reply_text("✅ Все фото обработаны.")
-            return
-
+            # Удаляем фото
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+            await query.edit_message_text(t['classify_rejected'])
         else:
-            # Определяем категорию по нажатой кнопке
-            category_map = {
-                "birki": "01_otsutstvuyut_birki",
-                "zazemlenie": "03_zazemlenie_ne_vypolneno",
-                "prohodki": "02_zadelka_prohodok",
-                "shpilki": "04_shpilki_lotka_ne_srezany",
-                "oksidy": "05_oksidy_rzhavchina",
-                "shema": "06_otsutstvie_shemy"
-            }
-            target_category = category_map.get(action)
-            if not target_category:
+            # Классифицируем — перемещаем в photo_db
+            category = get_category_by_keyword(action)
+            if not category:
                 await query.edit_message_text("❌ Неизвестная категория.")
                 return
+            # Создаём папку, если её нет
+            target_dir = os.path.join("photo_db", category["keyword"])
+            os.makedirs(target_dir, exist_ok=True)
+            # Копируем фото с новым именем (с временем)
+            new_name = f"{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            new_path = os.path.join(target_dir, new_name)
+            shutil.copy2(photo_path, new_path)
+            # Удаляем из review
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+            # Перестраиваем индекс
+            rebuild_index()
+            # Обновляем глобальный индекс
+            global index, image_paths
+            load_index()
+            await query.edit_message_text(t['classify_success'].format(category=category["label_ru"] if lang == "ru" else category["label_en"]))
 
-            # Копируем фото в папку photo_db
-            photo_db_dir = os.path.join(base_dir, "photo_db", target_category)
-            os.makedirs(photo_db_dir, exist_ok=True)
-            dest_path = os.path.join(photo_db_dir, filename)
-            shutil.copy2(photo_path, dest_path)
-            os.remove(photo_path)  # удаляем из review
-
-            await query.edit_message_text(f"✅ Фото добавлено в категорию: {target_category}")
-
-            # Удаляем обработанное фото из списка
-            photo_files.pop(0)
-            if photo_files:
-                next_path = photo_files[0]
-                with open(next_path, 'rb') as f:
-                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
-            else:
-                await query.message.reply_text("✅ Все фото обработаны.")
+        # Отправляем следующее фото, если есть
+        if context.user_data['review_photos']:
+            next_photo = context.user_data['review_photos'][0]
+            with open(next_photo, 'rb') as f:
+                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_classify_keyboard(lang))
+        else:
+            await query.message.reply_text(t['review_done'])
 
 # ===== COMMANDS =====
 async def start_command(update, context):
@@ -630,14 +638,13 @@ async def review_command(update, context):
         await update.message.reply_text(t['review_empty'])
         return
 
-    # Отправляем первое фото с кнопками
-    first_path = photo_paths[0]
-    with open(first_path, 'rb') as f:
-        await update.message.reply_photo(
-            photo=f,
-            caption="📸 Классифицируйте это фото:",
-            reply_markup=get_review_keyboard()
-        )
+    # Сохраняем список фото в контекст для пошаговой классификации
+    context.user_data['review_photos'] = photo_paths
+
+    # Показываем первое фото с кнопками
+    first_photo = photo_paths[0]
+    with open(first_photo, 'rb') as f:
+        await update.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_classify_keyboard(lang))
 
 async def stats_command(update, context):
     user_id = update.effective_user.id
