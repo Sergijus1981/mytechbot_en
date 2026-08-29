@@ -102,11 +102,11 @@ def generate_pdf_report(report_data, chat_id):
             story.append(Paragraph(f"<b>Defect #{i}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
             story.append(Paragraph(f"📜 Standard: {item.get('normative', '—')}", styles['Normal']))
-            story.append(Paragraph(
-                "🛠 Recommended action: Bring into compliance with IEC 61293-2016 "
-                "(Electrical equipment – Marking with specified characteristics of power supply).",
-                styles['Normal']
-            ))
+           story.append(Paragraph(
+    "🛠 Recommended action: Bring into compliance with "
+    "the requirements of applicable regulatory and technical documents (RTD).",
+    styles['Normal']
+))
             
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
