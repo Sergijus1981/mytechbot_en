@@ -30,7 +30,7 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
-OWNER_ID = 8743362338  # только для статистики
+OWNER_ID = 8743362338
 
 # ===== TRANSLATIONS =====
 TRANSLATIONS = {
@@ -41,7 +41,6 @@ TRANSLATIONS = {
         "standard": "📜 Standard:",
         "photo_saved": "📸 Photo saved for manual verification.",
         "awaiting": "🕒 Awaiting confirmation.",
-        "unknown_defect": "📌 Unknown defect (file: {name})",
         "no_match": "❌ Could not find a matching image in the database.",
         "report_ready": "📄 Your report is ready!",
         "no_defects": "📭 No defects recorded. Please send photos first.",
@@ -50,7 +49,6 @@ TRANSLATIONS = {
         "review_done": "✅ All photos sent.",
         "stats": "📊 Bot Statistics:\n👥 Total users: {total}\n📈 New today: {today}\n📅 New this week: {week}",
         "stats_unauthorized": "⛔ You are not authorized to view statistics.",
-        "language_prompt": "🌐 Please choose your language:",
         "choose_language": "🌐 Choose your language:",
         "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD)."
     },
@@ -61,7 +59,6 @@ TRANSLATIONS = {
         "standard": "📜 Норматив:",
         "photo_saved": "📸 Фото сохранено для ручной проверки.",
         "awaiting": "🕒 Ожидайте подтверждения.",
-        "unknown_defect": "📌 Неизвестное замечание (файл: {name})",
         "no_match": "❌ Не удалось найти похожее изображение в базе.",
         "report_ready": "📄 Ваш отчёт готов!",
         "no_defects": "📭 Нет замечаний для отчёта. Сначала отправьте фотографии.",
@@ -70,38 +67,61 @@ TRANSLATIONS = {
         "review_done": "✅ Все фото отправлены.",
         "stats": "📊 Статистика бота:\n👥 Всего пользователей: {total}\n📈 Новых сегодня: {today}\n📅 За неделю: {week}",
         "stats_unauthorized": "⛔ Вы не авторизованы для просмотра статистики.",
-        "language_prompt": "🌐 Пожалуйста, выберите язык:",
         "choose_language": "🌐 Выберите язык:",
         "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД)."
     }
 }
 
-# ===== CATEGORY DATA (always in English for internal logic) =====
+# ===== CATEGORY DATA (мультиязычная) =====
 CATEGORY_DATA = [
-    (
-        "01_otsutstvuyut_birki",
-        "⚠️ Missing cable/equipment labels (tags).",
-        "birki_etalon",
-        "IEC 60445, NEC 110.22, BS 7671 514.9"
-    ),
-    (
-        "02_zadelka_prohodok",
-        "⚠️ Gaps in cable penetrations not sealed.",
-        "prohodki_etalon",
-        "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"
-    ),
-    (
-        "03_zazemlenie_ne_vypolneno",
-        "⚠️ Earthing not provided or does not meet standards.",
-        "zazemlenie_etalon",
-        "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"
-    ),
-    (
-        "04_shpilki_lotka_ne_srezany",
-        "⚠️ Cable tray studs not trimmed.",
-        "shpilki_etalon",
-        "IEC 61537, NEC 392.18, BS 7671 522.8"
-    ),
+    {
+        "keyword": "01_otsutstvuyut_birki",
+        "etalon_prefix": "birki_etalon",
+        "text": {
+            "en": "⚠️ Missing cable/equipment labels (tags).",
+            "ru": "⚠️ Отсутствуют бирки на оборудовании (кабелях, муфтах, аппаратах)."
+        },
+        "normative": {
+            "en": "IEC 60445, NEC 110.22, BS 7671 514.9",
+            "ru": "ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8"
+        }
+    },
+    {
+        "keyword": "02_zadelka_prohodok",
+        "etalon_prefix": "prohodki_etalon",
+        "text": {
+            "en": "⚠️ Gaps in cable penetrations not sealed.",
+            "ru": "⚠️ Не выполнена заделка проходок (зазоры в трубах, коробах, проёмах)."
+        },
+        "normative": {
+            "en": "IEC 60364-5-52, NEC 300.21, BS 7671 527.2",
+            "ru": "СП 76.13330.2016 п. 6.4.1.25"
+        }
+    },
+    {
+        "keyword": "03_zazemlenie_ne_vypolneno",
+        "etalon_prefix": "zazemlenie_etalon",
+        "text": {
+            "en": "⚠️ Earthing not provided or does not meet standards.",
+            "ru": "⚠️ Не выполнено заземление (или не соответствует нормам)."
+        },
+        "normative": {
+            "en": "IEC 60364-4-41, NEC 250.4, BS 7671 411.3",
+            "ru": "ПУЭ п. 1.7.76"
+        }
+    },
+    {
+        "keyword": "04_shpilki_lotka_ne_srezany",
+        "etalon_prefix": "shpilki_etalon",
+        "text": {
+            "en": "⚠️ Cable tray studs not trimmed.",
+            "ru": "⚠️ Шпильки лотка не срезаны (опасность травматизма и повреждения кабелей)."
+        },
+        "normative": {
+            "en": "IEC 61537, NEC 392.18, BS 7671 522.8",
+            "ru": "ГОСТ Р 50571.5.52-2011"
+        }
+    }
 ]
 
 # ===== DATABASE =====
@@ -134,9 +154,7 @@ def get_user_language(user_id):
     c = conn.cursor()
     lang = c.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
-    if lang:
-        return lang[0]
-    return "en"  # default
+    return lang[0] if lang else "en"
 
 def set_user_language(user_id, lang):
     conn = sqlite3.connect(DB_PATH)
@@ -182,15 +200,13 @@ except:
 # ===== KEYBOARDS =====
 def get_report_keyboard(lang):
     text = "📄 Generate Report" if lang == "en" else "📄 Сформировать отчёт"
-    keyboard = [[InlineKeyboardButton(text, callback_data="generate_report")]]
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup([[InlineKeyboardButton(text, callback_data="generate_report")]])
 
 def get_language_keyboard():
-    keyboard = [
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+    ])
 
 # ===== PDF GENERATION =====
 def generate_pdf_report(report_data, chat_id, lang):
@@ -216,8 +232,8 @@ def generate_pdf_report(report_data, chat_id, lang):
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
                     story.append(img)
                     story.append(Paragraph("📸 Actual photo" if lang == 'en' else "📸 Фото замечания", styles['Normal']))
-                except Exception as e:
-                    story.append(Paragraph(f"⚠️ Photo error: {e}", styles['Normal']))
+                except:
+                    story.append(Paragraph("⚠️ Photo not available" if lang == 'en' else "⚠️ Фото не загружено", styles['Normal']))
             story.append(Spacer(1, 6*mm))
             story.append(PageBreak())
     else:
@@ -303,20 +319,35 @@ def get_embedding(image_path):
         emb = embedder(img_tensor).flatten().cpu().numpy()
     return emb
 
-def get_category_info(filename):
+def get_category_info(filename, lang):
+    """Возвращает текст и норматив на нужном языке."""
     name = os.path.basename(filename)
     print(f"🔎 Determining category for: {name}")
-    for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
-        if name.startswith(keyword):
-            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
+    for category in CATEGORY_DATA:
+        if name.startswith(category["keyword"]):
+            return {
+                "text": category["text"].get(lang, category["text"]["en"]),
+                "etalon_prefix": category["etalon_prefix"],
+                "normative": category["normative"].get(lang, category["normative"]["en"])
+            }
     parts = name.split('_')
-    for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
-        kw_parts = keyword.split('_')
+    for category in CATEGORY_DATA:
+        kw_parts = category["keyword"].split('_')
         if any(kp in parts for kp in kw_parts):
-            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
-    return {"text": f"📌 Unknown defect (file: {name})", "etalon_prefix": None, "normative": None}
+            return {
+                "text": category["text"].get(lang, category["text"]["en"]),
+                "etalon_prefix": category["etalon_prefix"],
+                "normative": category["normative"].get(lang, category["normative"]["en"])
+            }
+    return {
+        "text": f"📌 Unknown defect (file: {name})" if lang == "en" else f"📌 Неизвестное замечание (файл: {name})",
+        "etalon_prefix": None,
+        "normative": None
+    }
 
 def find_etalon(prefix):
+    if not prefix:
+        return None
     etalon_dir = "etalons"
     if not os.path.exists(etalon_dir):
         return None
@@ -353,7 +384,7 @@ async def handle_photo(update, context):
 
         idx = indices[0][0]
         full_path = image_paths[idx]
-        info = get_category_info(full_path)
+        info = get_category_info(full_path, lang)
 
         base_dir = os.getcwd()
         category_folder = info.get("etalon_prefix", "unknown")
@@ -417,24 +448,19 @@ async def button_callback(update, context):
         t_new = TRANSLATIONS[new_lang]
         await query.edit_message_text(t_new['language_set'])
 
-# ===== COMMAND /start =====
+# ===== COMMANDS =====
 async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_user_language(user_id)
-    t = TRANSLATIONS[lang]
-    welcome_text = t['welcome']
-    await update.message.reply_text(welcome_text, reply_markup=get_language_keyboard())
+    await update.message.reply_text(TRANSLATIONS[lang]['welcome'], reply_markup=get_language_keyboard())
 
-# ===== COMMAND /language =====
 async def language_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_user_language(user_id)
-    t = TRANSLATIONS[lang]
-    await update.message.reply_text(t['choose_language'], reply_markup=get_language_keyboard())
+    await update.message.reply_text(TRANSLATIONS[lang]['choose_language'], reply_markup=get_language_keyboard())
 
-# ===== COMMAND /review =====
 async def review_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
@@ -461,24 +487,19 @@ async def review_command(update, context):
         try:
             with open(path, 'rb') as f:
                 await update.message.reply_photo(photo=f)
-        except Exception as e:
-            print(f"❌ Ошибка отправки {path}: {e}")
+        except:
             await update.message.reply_text(f"❌ Не удалось отправить: {os.path.basename(path)}")
     await update.message.reply_text(t['review_done'])
 
-# ===== COMMAND /stats (only for owner) =====
 async def stats_command(update, context):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
         lang = get_user_language(user_id)
         await update.message.reply_text(TRANSLATIONS[lang]['stats_unauthorized'])
         return
-
     total, today_count, week_count = get_stats()
     lang = get_user_language(user_id)
-    t = TRANSLATIONS[lang]
-    msg = t['stats'].format(total=total, today=today_count, week=week_count)
-    await update.message.reply_text(msg)
+    await update.message.reply_text(TRANSLATIONS[lang]['stats'].format(total=total, today=today_count, week=week_count))
 
 # ===== START =====
 if __name__ == "__main__":
