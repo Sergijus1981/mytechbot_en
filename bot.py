@@ -22,6 +22,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.fonts import addMapping
 import io
 import datetime as dt
+import shutil
 
 # ===== CONFIG =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
@@ -49,25 +50,8 @@ TRANSLATIONS = {
         "stats_unauthorized": "⛔ You are not authorized to view statistics.",
         "choose_language": "🌐 Choose your language:",
         "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD).",
-        "defects_found": "🔍 **Defects found:**",
-        "no_photo": "❌ Could not find a matching image in the database.",
-        "prescription_ready": "📄 Your prescription is ready!",
-        "defect_label": "Defect #{i}",
-        "standard_label": "Standard:",
-        "empty_report": "No defects recorded. Please send photos first.",
-        "prescription_title": "📋 Prescription for Elimination of Violations",
-        "issue_date": "Issue date: {date}",
-        "deadline": "Deadline for elimination: _______________",
-        "issued_by": "ISSUED THE PRESCRIPTION:",
-        "received_by": "TOOK THE PRESCRIPTION FOR WORK:",
-        "company": "Company: ___________________",
-        "position": "Position: _________________",
-        "full_name": "Full name: _______________________",
-        "signature": "Signature: ___________________",
-        "violation": "Violation #{i}",
-        "photo": "📸 Photo of the violation:",
-        "no_photo_available": "No photo available",
-        "generate_prescription": "📄 Generate Prescription"
+        "defects_list": "🔍 Found defects:",
+        "generate_order": "📄 Generate order"
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -84,25 +68,8 @@ TRANSLATIONS = {
         "stats_unauthorized": "⛔ Вы не авторизованы для просмотра статистики.",
         "choose_language": "🌐 Выберите язык:",
         "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД).",
-        "defects_found": "🔍 **Найдены замечания:**",
-        "no_photo": "❌ Не удалось найти похожее изображение в базе.",
-        "prescription_ready": "📄 Ваше предписание готово!",
-        "defect_label": "Замечание №{i}",
-        "standard_label": "Норматив:",
-        "empty_report": "Нет замечаний для предписания. Сначала отправьте фотографии.",
-        "prescription_title": "📋 Предписание по устранению нарушений",
-        "issue_date": "Дата выдачи: {date}",
-        "deadline": "Срок устранения: _______________",
-        "issued_by": "ВЫДАЛ ПРЕДПИСАНИЕ:",
-        "received_by": "ВЗЯЛ В РАБОТУ:",
-        "company": "Компания: ___________________",
-        "position": "Должность: _________________",
-        "full_name": "ФИО: _______________________",
-        "signature": "Подпись: ___________________",
-        "violation": "Замечание №{i}",
-        "photo": "📸 Фото нарушения:",
-        "no_photo_available": "Фото не загружено",
-        "generate_prescription": "📄 Сформировать предписание"
+        "defects_list": "🔍 Найдены замечания:",
+        "generate_order": "📄 Сформировать предписание"
     }
 }
 
@@ -154,6 +121,30 @@ CATEGORY_DATA = [
         "normative": {
             "en": "IEC 61537, NEC 392.18, BS 7671 522.8",
             "ru": "ГОСТ Р 50571.5.52-2011"
+        }
+    },
+    {
+        "keyword": "05_oksidy_rzhavchina",
+        "etalon_prefix": "oksidy_etalon",
+        "text": {
+            "en": "⚠️ Oxidation and rust on equipment contacts.",
+            "ru": "⚠️ Окислы и ржавчина на контактах оборудования."
+        },
+        "normative": {
+            "en": "IEC 60204-1, NEC 110.12",
+            "ru": "ПУЭ п. 1.8.4, ГОСТ 10434-82"
+        }
+    },
+    {
+        "keyword": "06_otsutstvie_shemy",
+        "etalon_prefix": "shema_etalon",
+        "text": {
+            "en": "⚠️ Single-line diagram missing inside the cabinet.",
+            "ru": "⚠️ Отсутствует однолинейная схема внутри шкафа."
+        },
+        "normative": {
+            "en": "IEC 61082-1, NEC 110.22",
+            "ru": "ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8"
         }
     }
 ]
@@ -233,7 +224,7 @@ except:
 
 # ===== KEYBOARDS =====
 def get_report_keyboard(lang):
-    text = TRANSLATIONS[lang]["generate_prescription"]
+    text = TRANSLATIONS[lang]['generate_order']
     return InlineKeyboardMarkup([[InlineKeyboardButton(text, callback_data="generate_report")]])
 
 def get_language_keyboard():
@@ -250,44 +241,42 @@ def generate_pdf_report(report_data, chat_id, lang):
     for style_name in styles.byName:
         styles[style_name].fontName = FONT_NAME
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
-
     story = []
-    # Заголовок
-    story.append(Paragraph(TRANSLATIONS[lang]['prescription_title'], title_style))
-    story.append(Paragraph(TRANSLATIONS[lang]['issue_date'].format(date=dt.datetime.now().strftime('%d.%m.%Y')), styles['Normal']))
-    story.append(Spacer(1, 12*mm))
+    title = "ПРЕДПИСАНИЕ" if lang == "ru" else "ORDER"
+    story.append(Paragraph(title, title_style))
+    story.append(Paragraph(f"Дата выдачи: {dt.datetime.now().strftime('%d.%m.%Y')}" if lang == "ru" else f"Issue date: {dt.datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
+    story.append(Spacer(1, 6*mm))
 
     if report_data:
         for i, item in enumerate(report_data, 1):
-            story.append(Paragraph(TRANSLATIONS[lang]['violation'].format(i=i), styles['Heading2']))
-            story.append(Paragraph(f"{item.get('text', 'Unknown')}", styles['Normal']))
-            story.append(Paragraph(f"{TRANSLATIONS[lang]['standard_label']} {item.get('normative', '—')}", styles['Normal']))
-            # Добавляем фото нарушения
+            story.append(Paragraph(f"<b>{'Замечание' if lang == 'ru' else 'Defect'} #{i}</b>", styles['Heading2']))
+            story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
+            story.append(Paragraph(f"{'Норматив:' if lang == 'ru' else 'Standard:'} {item.get('normative', '—')}", styles['Normal']))
+            story.append(Paragraph(TRANSLATIONS[lang]['report_action'], styles['Normal']))
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
                     story.append(img)
-                    story.append(Paragraph(TRANSLATIONS[lang]['photo'], styles['Normal']))
+                    story.append(Paragraph("📸 Фото нарушения" if lang == 'ru' else "📸 Violation photo", styles['Normal']))
                 except:
-                    story.append(Paragraph(TRANSLATIONS[lang]['no_photo_available'], styles['Normal']))
-            else:
-                story.append(Paragraph(TRANSLATIONS[lang]['no_photo_available'], styles['Normal']))
-            story.append(Spacer(1, 6*mm))
-
-    # Блок для подписей и срока
-    story.append(Paragraph(TRANSLATIONS[lang]['deadline'], styles['Normal']))
-    story.append(Spacer(1, 6*mm))
-    story.append(Paragraph(TRANSLATIONS[lang]['issued_by'], styles['Heading2']))
-    story.append(Paragraph(TRANSLATIONS[lang]['company'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['position'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['full_name'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['signature'], styles['Normal']))
-    story.append(Spacer(1, 6*mm))
-    story.append(Paragraph(TRANSLATIONS[lang]['received_by'], styles['Heading2']))
-    story.append(Paragraph(TRANSLATIONS[lang]['company'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['position'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['full_name'], styles['Normal']))
-    story.append(Paragraph(TRANSLATIONS[lang]['signature'], styles['Normal']))
+                    story.append(Paragraph("⚠️ Фото не загружено" if lang == 'ru' else "⚠️ Photo not available", styles['Normal']))
+            story.append(Spacer(1, 4*mm))
+        story.append(Spacer(1, 6*mm))
+        story.append(Paragraph("Срок устранения: _______________", styles['Normal']))
+        story.append(Spacer(1, 4*mm))
+        story.append(Paragraph("ВЫДАЛ ПРЕДПИСАНИЕ:" if lang == 'ru' else "ISSUED BY:", styles['Normal']))
+        story.append(Paragraph("Компания: ___________________", styles['Normal']))
+        story.append(Paragraph("Должность: _________________", styles['Normal']))
+        story.append(Paragraph("ФИО: _______________________", styles['Normal']))
+        story.append(Paragraph("Подпись: ___________________", styles['Normal']))
+        story.append(Spacer(1, 4*mm))
+        story.append(Paragraph("ВЗЯЛ В РАБОТУ:" if lang == 'ru' else "RECEIVED BY:", styles['Normal']))
+        story.append(Paragraph("Компания: ___________________", styles['Normal']))
+        story.append(Paragraph("Должность: _________________", styles['Normal']))
+        story.append(Paragraph("ФИО: _______________________", styles['Normal']))
+        story.append(Paragraph("Подпись: ___________________", styles['Normal']))
+    else:
+        story.append(Paragraph(TRANSLATIONS[lang]['no_defects'], styles['Normal']))
 
     doc.build(story)
     buffer.seek(0)
@@ -380,7 +369,6 @@ def get_category_info(filename, lang):
                 "etalon_prefix": category["etalon_prefix"],
                 "normative": category["normative"].get(lang, category["normative"]["en"])
             }
-    # Если точное совпадение не найдено, пробуем по частям
     parts = name.split('_')
     for category in CATEGORY_DATA:
         kw_parts = category["keyword"].split('_')
@@ -390,7 +378,6 @@ def get_category_info(filename, lang):
                 "etalon_prefix": category["etalon_prefix"],
                 "normative": category["normative"].get(lang, category["normative"]["en"])
             }
-    # Если ничего не найдено
     return {
         "text": f"📌 Unknown defect (file: {name})" if lang == "en" else f"📌 Неизвестное замечание (файл: {name})",
         "etalon_prefix": None,
@@ -428,57 +415,63 @@ async def handle_photo(update, context):
         os.remove(user_path)
 
         emb = np.array([emb]).astype('float32')
-        # Ищем 3 самых похожих изображения
-        k = 3
-        distances, indices = index.search(emb, k)
+        distances, indices = index.search(emb, 3)  # ищем 3 самых похожих
 
         if len(indices[0]) == 0 or indices[0][0] == -1:
-            await update.message.reply_text(t['no_photo'])
+            await update.message.reply_text(t['no_match'])
             return
 
-        # Собираем уникальные замечания
+        # Сохраняем фото в review (для последующей классификации)
+        base_dir = os.getcwd()
+        review_dir = os.path.join(base_dir, "review")
+        os.makedirs(review_dir, exist_ok=True)
+        timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+        review_path = os.path.join(review_dir, f"{timestamp}.jpg")
+        print(f"📂 Сохраняю фото в: {review_path}")
+        await file.download_to_drive(review_path)
+        print(f"✅ Фото сохранено в review: {review_path}")
+
+        # Собираем уникальные замечания (до 3)
         unique_defects = []
         seen = set()
         for idx in indices[0]:
-            if idx == -1:
-                continue
             full_path = image_paths[idx]
             info = get_category_info(full_path, lang)
             cat_key = info.get("etalon_prefix")
             if cat_key and cat_key not in seen:
                 seen.add(cat_key)
                 unique_defects.append(info)
-            if len(unique_defects) >= 3:  # максимум 3 замечания
-                break
+                if len(unique_defects) >= 3:
+                    break
 
-        # Сохраняем оригинальное фото в review (для истории)
-        base_dir = os.getcwd()
-        timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
-        review_path = os.path.join(base_dir, "review", "all", f"{timestamp}.jpg")
-        os.makedirs(os.path.dirname(review_path), exist_ok=True)
-        await file.download_to_drive(review_path)
-
-        # Формируем ответ
-        if len(unique_defects) == 0:
-            await update.message.reply_text(t['no_photo'])
+        if not unique_defects:
+            await update.message.reply_text(t['no_match'])
             return
 
-        response = t['defects_found'] + "\n\n"
+        # Формируем ответ
+        response = t['defects_list'] + "\n"
         for i, defect in enumerate(unique_defects, 1):
             response += f"{i}. {defect['text']}\n"
-            if defect.get("normative"):
-                response += f"   {t['standard']} {defect['normative']}\n\n"
+            if defect.get('normative'):
+                response += f"   {t['standard']} {defect['normative']}\n"
 
         # Сохраняем замечания в сессию для предписания
         if 'report_data' not in context.user_data:
             context.user_data['report_data'] = []
-        context.user_data['report_data'] = unique_defects
+        for defect in unique_defects:
+            context.user_data['report_data'].append({
+                'text': defect['text'],
+                'normative': defect.get('normative'),
+                'photo_path': review_path
+            })
 
-        # Добавляем кнопку для формирования предписания
-        await update.message.reply_text(
-            response,
-            reply_markup=get_report_keyboard(lang)
-        )
+        # Отправляем эталон (первое найденное)
+        etalon_path = find_etalon(unique_defects[0].get("etalon_prefix"))
+        if etalon_path and os.path.exists(etalon_path):
+            with open(etalon_path, 'rb') as f:
+                await update.message.reply_photo(photo=f, caption=response, reply_markup=get_report_keyboard(lang))
+        else:
+            await update.message.reply_text(response, reply_markup=get_report_keyboard(lang))
 
     except Exception as e:
         print(f"Error: {e}")
@@ -497,13 +490,13 @@ async def button_callback(update, context):
     if query.data == "generate_report":
         report_data = context.user_data.get('report_data', [])
         if not report_data:
-            await query.edit_message_text(t['empty_report'])
+            await query.edit_message_text(t['no_defects'])
             return
         pdf_buffer = generate_pdf_report(report_data, query.message.chat.id, lang)
         await query.message.reply_document(
             document=pdf_buffer,
-            filename=f"prescription_{dt.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-            caption=t['prescription_ready']
+            filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang == 'ru' else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
+            caption=t['report_ready']
         )
         context.user_data['report_data'] = []
 
@@ -532,8 +525,10 @@ async def review_command(update, context):
     lang = get_user_language(user_id)
     t = TRANSLATIONS[lang]
 
-    review_dir = os.path.join(os.getcwd(), "review")
+    base_dir = os.getcwd()
+    review_dir = os.path.join(base_dir, "review")
     if not os.path.exists(review_dir):
+        os.makedirs(review_dir, exist_ok=True)
         await update.message.reply_text(t['review_empty'])
         return
 
@@ -552,7 +547,8 @@ async def review_command(update, context):
         try:
             with open(path, 'rb') as f:
                 await update.message.reply_photo(photo=f)
-        except:
+        except Exception as e:
+            print(f"❌ Ошибка отправки {path}: {e}")
             await update.message.reply_text(f"❌ Не удалось отправить: {os.path.basename(path)}")
     await update.message.reply_text(t['review_done'])
 
