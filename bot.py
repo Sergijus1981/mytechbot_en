@@ -5,6 +5,8 @@ import gdown
 import requests
 import numpy as np
 import faiss
+import sqlite3
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
@@ -19,7 +21,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.fonts import addMapping
 import io
-import datetime
+import datetime as dt
 
 # ===== CONFIG =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
@@ -28,6 +30,7 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
+OWNER_ID = 8743362338  # только ты увидишь статистику
 
 # ===== CATEGORY DATA =====
 CATEGORY_DATA = [
@@ -57,6 +60,46 @@ CATEGORY_DATA = [
     ),
 ]
 
+# ===== DATABASE SETUP =====
+DB_PATH = "users.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        first_seen TEXT,
+        last_seen TEXT
+    )''')
+    conn.commit()
+    conn.close()
+
+def register_user(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    now = dt.datetime.now().isoformat()
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen) VALUES (?, ?, ?)",
+              (user_id, now, now))
+    c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
+    conn.commit()
+    conn.close()
+
+def get_stats():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    today = dt.datetime.now().date().isoformat()
+    today_count = c.execute(
+        "SELECT COUNT(*) FROM users WHERE date(first_seen) = ?", (today,)
+    ).fetchone()[0]
+    week_ago = (dt.datetime.now() - timedelta(days=7)).date().isoformat()
+    week_count = c.execute(
+        "SELECT COUNT(*) FROM users WHERE date(first_seen) >= ?", (week_ago,)
+    ).fetchone()[0]
+    conn.close()
+    return total, today_count, week_count
+
+# ===== GLOBALS =====
 index = None
 image_paths = None
 embedder = None
@@ -90,7 +133,7 @@ def generate_pdf_report(report_data, chat_id):
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
     story = []
     story.append(Paragraph("📋 Electrical Inspection Report", title_style))
-    story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
+    story.append(Paragraph(f"Date: {dt.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
     story.append(Spacer(1, 12*mm))
     if report_data:
         for i, item in enumerate(report_data, 1):
@@ -219,6 +262,9 @@ def find_etalon(prefix):
 # ===== HANDLE PHOTO =====
 async def handle_photo(update, context):
     try:
+        user_id = update.effective_user.id
+        register_user(user_id)
+
         load_index()
         load_model()
 
@@ -245,7 +291,7 @@ async def handle_photo(update, context):
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join(base_dir, "review", category_folder)
         os.makedirs(review_dir, exist_ok=True)
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
         review_path = os.path.join(review_dir, f"{timestamp}.jpg")
         print(f"📂 Сохраняю фото в: {review_path}")
         await file.download_to_drive(review_path)
@@ -278,6 +324,9 @@ async def handle_photo(update, context):
 async def button_callback(update, context):
     query = update.callback_query
     await query.answer()
+    user_id = update.effective_user.id
+    register_user(user_id)
+
     if query.data == "generate_report":
         report_data = context.user_data.get('report_data', [])
         if not report_data:
@@ -286,13 +335,16 @@ async def button_callback(update, context):
         pdf_buffer = generate_pdf_report(report_data, query.message.chat.id)
         await query.message.reply_document(
             document=pdf_buffer,
-            filename=f"report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+            filename=f"report_{dt.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
             caption="📄 Your report is ready!"
         )
         context.user_data['report_data'] = []
 
-# ===== COMMAND /review (без проверки владельца) =====
+# ===== COMMAND /review =====
 async def review_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+
     review_dir = os.path.join(os.getcwd(), "review")
     if not os.path.exists(review_dir):
         await update.message.reply_text("📭 Папка review пуста или не существует.")
@@ -320,8 +372,25 @@ async def review_command(update, context):
 
     await update.message.reply_text("✅ Все фото отправлены.")
 
+# ===== COMMAND /stats (только для владельца) =====
+async def stats_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⛔ You are not authorized to view statistics.")
+        return
+
+    total, today_count, week_count = get_stats()
+    msg = (
+        f"📊 Bot Statistics:\n"
+        f"👥 Total users: {total}\n"
+        f"📈 New today: {today_count}\n"
+        f"📅 New this week: {week_count}"
+    )
+    await update.message.reply_text(msg)
+
 # ===== START =====
 if __name__ == "__main__":
+    init_db()
     download_and_extract_photos()
     download_and_extract_etalons()
     load_index()
@@ -330,5 +399,6 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(CommandHandler("review", review_command))
+    app.add_handler(CommandHandler("stats", stats_command))
     print("🚀 Bot started. Waiting for photos...")
     app.run_polling()
