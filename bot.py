@@ -6,7 +6,9 @@ import requests
 import numpy as np
 import faiss
 import sqlite3
-from datetime import datetime, timedelta
+import io
+import datetime as dt
+from datetime import timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
@@ -20,8 +22,11 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.fonts import addMapping
-import io
-import datetime as dt
+
+# Импорт для определения языка и переводов
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
+from translations import TRANSLATIONS, get_text
 
 # ===== CONFIG =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
@@ -30,37 +35,45 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
-OWNER_ID = 8743362338  # только ты увидишь статистику
+OWNER_ID = 8743362338
 
 # ===== CATEGORY DATA =====
 CATEGORY_DATA = [
     (
         "01_otsutstvuyut_birki",
-        "⚠️ Missing cable/equipment labels (tags).",
+        {"ru": "⚠️ Отсутствуют бирки на оборудовании (кабелях, муфтах, аппаратах).",
+         "en": "⚠️ Missing cable/equipment labels (tags)."},
         "birki_etalon",
-        "IEC 60445, NEC 110.22, BS 7671 514.9"
+        {"ru": "ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8",
+         "en": "IEC 60445, NEC 110.22, BS 7671 514.9"}
     ),
     (
         "02_zadelka_prohodok",
-        "⚠️ Gaps in cable penetrations not sealed.",
+        {"ru": "⚠️ Не выполнена заделка проходок (зазоры в трубах, коробах, проёмах).",
+         "en": "⚠️ Gaps in cable penetrations not sealed."},
         "prohodki_etalon",
-        "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"
+        {"ru": "СП 76.13330.2016 п. 6.4.1.25",
+         "en": "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}
     ),
     (
         "03_zazemlenie_ne_vypolneno",
-        "⚠️ Earthing not provided or does not meet standards.",
+        {"ru": "⚠️ Не выполнено заземление (или не соответствует нормам).",
+         "en": "⚠️ Earthing not provided or does not meet standards."},
         "zazemlenie_etalon",
-        "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"
+        {"ru": "ПУЭ п. 1.7.76",
+         "en": "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}
     ),
     (
         "04_shpilki_lotka_ne_srezany",
-        "⚠️ Cable tray studs not trimmed.",
+        {"ru": "⚠️ Шпильки лотка не срезаны (опасность травматизма и повреждения кабелей).",
+         "en": "⚠️ Cable tray studs not trimmed."},
         "shpilki_etalon",
-        "IEC 61537, NEC 392.18, BS 7671 522.8"
+        {"ru": "ГОСТ Р 50571.5.52-2011",
+         "en": "IEC 61537, NEC 392.18, BS 7671 522.8"}
     ),
 ]
 
-# ===== DATABASE SETUP =====
+# ===== DATABASE =====
 DB_PATH = "users.db"
 
 def init_db():
@@ -69,18 +82,33 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
         first_seen TEXT,
-        last_seen TEXT
+        last_seen TEXT,
+        lang TEXT DEFAULT 'en'
     )''')
     conn.commit()
     conn.close()
 
-def register_user(user_id):
+def register_user(user_id, lang='en'):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     now = dt.datetime.now().isoformat()
-    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen) VALUES (?, ?, ?)",
-              (user_id, now, now))
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, lang) VALUES (?, ?, ?, ?)",
+              (user_id, now, now, lang))
     c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
+    conn.commit()
+    conn.close()
+
+def get_user_lang(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    lang = c.execute("SELECT lang FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    return lang[0] if lang else 'en'
+
+def update_user_lang(user_id, lang):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE users SET lang = ? WHERE user_id = ?", (lang, user_id))
     conn.commit()
     conn.close()
 
@@ -99,6 +127,20 @@ def get_stats():
     conn.close()
     return total, today_count, week_count
 
+# ===== LANGUAGE DETECTION =====
+def detect_language(text):
+    if not text:
+        return 'en'
+    try:
+        lang = detect(text)
+        # Поддерживаем только русский и английский
+        if lang == 'ru':
+            return 'ru'
+        else:
+            return 'en'
+    except LangDetectException:
+        return 'en'
+
 # ===== GLOBALS =====
 index = None
 image_paths = None
@@ -116,15 +158,22 @@ try:
     print("✅ DejaVuSans font loaded")
 except:
     FONT_NAME = 'Helvetica'
-    print("⚠️ DejaVuSans not found, using Helvetica")
+    print("⚠️ DejaVuSans not found")
 
-# ===== KEYBOARD =====
-def get_report_keyboard():
-    keyboard = [[InlineKeyboardButton("📄 Generate Report", callback_data="generate_report")]]
+# ===== KEYBOARDS =====
+def get_report_keyboard(lang):
+    keyboard = [[InlineKeyboardButton(get_text(lang, 'generate_report'), callback_data="generate_report")]]
+    return InlineKeyboardMarkup(keyboard)
+
+def get_language_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
+        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 # ===== PDF GENERATION =====
-def generate_pdf_report(report_data, chat_id):
+def generate_pdf_report(report_data, chat_id, lang):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
@@ -132,17 +181,17 @@ def generate_pdf_report(report_data, chat_id):
         styles[style_name].fontName = FONT_NAME
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
     story = []
-    story.append(Paragraph("📋 Electrical Inspection Report", title_style))
+    title = "📋 Electrical Inspection Report" if lang == 'en' else "📋 Отчёт по технадзору"
+    story.append(Paragraph(title, title_style))
     story.append(Paragraph(f"Date: {dt.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
     story.append(Spacer(1, 12*mm))
     if report_data:
         for i, item in enumerate(report_data, 1):
-            story.append(Paragraph(f"<b>Defect #{i}</b>", styles['Heading2']))
+            story.append(Paragraph(f"<b>{get_text(lang, 'defect').format(i)}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
-            story.append(Paragraph(f"📜 Standard: {item.get('normative', '—')}", styles['Normal']))
+            story.append(Paragraph(f"📜 {get_text(lang, 'standard')}: {item.get('normative', '—')}", styles['Normal']))
             story.append(Paragraph(
-                "🛠 Recommended action: Bring into compliance with "
-                "the requirements of applicable regulatory and technical documents (RTD).",
+                get_text(lang, 'recommendation'),
                 styles['Normal']
             ))
             if item.get('photo_path') and os.path.exists(item['photo_path']):
@@ -155,7 +204,7 @@ def generate_pdf_report(report_data, chat_id):
             story.append(Spacer(1, 6*mm))
             story.append(PageBreak())
     else:
-        story.append(Paragraph("No defects recorded.", styles['Normal']))
+        story.append(Paragraph(get_text(lang, 'no_defects'), styles['Normal']))
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -237,18 +286,30 @@ def get_embedding(image_path):
         emb = embedder(img_tensor).flatten().cpu().numpy()
     return emb
 
-def get_category_info(filename):
+def get_category_info(filename, lang):
     name = os.path.basename(filename)
     print(f"🔎 Determining category for: {name}")
     for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
         if name.startswith(keyword):
-            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
+            return {
+                "text": text.get(lang, text['en']),
+                "etalon_prefix": etalon_prefix,
+                "normative": normative.get(lang, normative['en'])
+            }
     parts = name.split('_')
     for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
         kw_parts = keyword.split('_')
         if any(kp in parts for kp in kw_parts):
-            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
-    return {"text": f"📌 Unknown defect (file: {name})", "etalon_prefix": None, "normative": None}
+            return {
+                "text": text.get(lang, text['en']),
+                "etalon_prefix": etalon_prefix,
+                "normative": normative.get(lang, normative['en'])
+            }
+    return {
+        "text": f"📌 Unknown defect (file: {name})",
+        "etalon_prefix": None,
+        "normative": None
+    }
 
 def find_etalon(prefix):
     etalon_dir = "etalons"
@@ -259,11 +320,23 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLE PHOTO =====
+# ===== HANDLERS =====
+async def start(update, context):
+    user_id = update.effective_user.id
+    # Определяем язык по первому сообщению
+    text = update.message.text or ""
+    lang = detect_language(text) if text else 'en'
+    register_user(user_id, lang)
+    context.user_data['lang'] = lang
+    await update.message.reply_text(
+        get_text(lang, 'start'),
+        reply_markup=get_language_keyboard() if lang == 'ru' else None
+    )
+
 async def handle_photo(update, context):
     try:
         user_id = update.effective_user.id
-        register_user(user_id)
+        lang = context.user_data.get('lang', get_user_lang(user_id))
 
         load_index()
         load_model()
@@ -280,13 +353,14 @@ async def handle_photo(update, context):
         distances, indices = index.search(emb, 1)
 
         if len(indices[0]) == 0 or indices[0][0] == -1:
-            await update.message.reply_text("❌ Could not find a matching image in the database.")
+            await update.message.reply_text(get_text(lang, 'no_photo_found'))
             return
 
         idx = indices[0][0]
         full_path = image_paths[idx]
-        info = get_category_info(full_path)
+        info = get_category_info(full_path, lang)
 
+        # Сохраняем фото в review
         base_dir = os.getcwd()
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join(base_dir, "review", category_folder)
@@ -297,16 +371,16 @@ async def handle_photo(update, context):
         await file.download_to_drive(review_path)
         print(f"✅ Фото сохранено: {review_path}")
 
-        response = f"🔍 **Defect found:**\n{info['text']}\n\n📸 Photo saved for manual verification.\n🕒 Awaiting confirmation."
+        response = f"🔍 **{get_text(lang, 'defect_found')}**\n{info['text']}\n\n📸 {get_text(lang, 'photo_saved')}"
         if info.get("normative"):
-            response += f"\n📜 Standard: {info['normative']}"
+            response += f"\n📜 {get_text(lang, 'standard')}: {info['normative']}"
 
         etalon_path = find_etalon(info.get("etalon_prefix"))
         if etalon_path and os.path.exists(etalon_path):
             with open(etalon_path, 'rb') as f:
-                await update.message.reply_photo(photo=f, caption=response, reply_markup=get_report_keyboard())
+                await update.message.reply_photo(photo=f, caption=response, reply_markup=get_report_keyboard(lang))
         else:
-            await update.message.reply_text(response, reply_markup=get_report_keyboard())
+            await update.message.reply_text(response, reply_markup=get_report_keyboard(lang))
 
         if 'report_data' not in context.user_data:
             context.user_data['report_data'] = []
@@ -318,32 +392,37 @@ async def handle_photo(update, context):
 
     except Exception as e:
         print(f"Error: {e}")
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text(f"❌ {get_text(lang, 'error').format(str(e))}")
 
-# ===== BUTTON CALLBACK =====
 async def button_callback(update, context):
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
-    register_user(user_id)
+    lang = context.user_data.get('lang', get_user_lang(user_id))
+
+    if query.data.startswith("lang_"):
+        new_lang = query.data.split("_")[1]
+        update_user_lang(user_id, new_lang)
+        context.user_data['lang'] = new_lang
+        await query.edit_message_text(get_text(new_lang, 'language_selected'))
+        return
 
     if query.data == "generate_report":
         report_data = context.user_data.get('report_data', [])
         if not report_data:
-            await query.edit_message_text("📭 No defects recorded. Please send photos first.")
+            await query.edit_message_text(get_text(lang, 'no_defects'))
             return
-        pdf_buffer = generate_pdf_report(report_data, query.message.chat.id)
+        pdf_buffer = generate_pdf_report(report_data, query.message.chat.id, lang)
         await query.message.reply_document(
             document=pdf_buffer,
             filename=f"report_{dt.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-            caption="📄 Your report is ready!"
+            caption=get_text(lang, 'report_ready')
         )
         context.user_data['report_data'] = []
 
-# ===== COMMAND /review =====
 async def review_command(update, context):
     user_id = update.effective_user.id
-    register_user(user_id)
+    lang = context.user_data.get('lang', get_user_lang(user_id))
 
     review_dir = os.path.join(os.getcwd(), "review")
     if not os.path.exists(review_dir):
@@ -372,7 +451,6 @@ async def review_command(update, context):
 
     await update.message.reply_text("✅ Все фото отправлены.")
 
-# ===== COMMAND /stats (только для владельца) =====
 async def stats_command(update, context):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
@@ -388,6 +466,12 @@ async def stats_command(update, context):
     )
     await update.message.reply_text(msg)
 
+async def language_command(update, context):
+    await update.message.reply_text(
+        "🌍 Please choose your language / Выберите язык:",
+        reply_markup=get_language_keyboard()
+    )
+
 # ===== START =====
 if __name__ == "__main__":
     init_db()
@@ -396,6 +480,8 @@ if __name__ == "__main__":
     load_index()
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("language", language_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(CommandHandler("review", review_command))
