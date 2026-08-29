@@ -6,7 +6,7 @@ import requests
 import numpy as np
 import faiss
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
 import torch
 from torchvision import transforms
@@ -28,6 +28,7 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
+OWNER_ID = 8743362338  # твой Telegram ID (только ты сможешь использовать /review)
 
 # ===== CATEGORY DATA =====
 CATEGORY_DATA = [
@@ -216,7 +217,7 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLE PHOTO (with diagnostics and absolute path) =====
+# ===== HANDLE PHOTO =====
 async def handle_photo(update, context):
     try:
         load_index()
@@ -241,32 +242,15 @@ async def handle_photo(update, context):
         full_path = image_paths[idx]
         info = get_category_info(full_path)
 
-        # ---- Сохранение в review с абсолютным путём и диагностикой ----
-        base_dir = os.getcwd()  # /opt/render/project/src
+        base_dir = os.getcwd()
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join(base_dir, "review", category_folder)
         os.makedirs(review_dir, exist_ok=True)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         review_path = os.path.join(review_dir, f"{timestamp}.jpg")
         print(f"📂 Сохраняю фото в: {review_path}")
-        print(f"📁 Папка существует: {os.path.exists(review_dir)}")
-        try:
-            await file.download_to_drive(review_path)
-            print(f"✅ Фото сохранено: {review_path}")
-            if os.path.exists(review_path):
-                print(f"✅ Файл существует, размер: {os.path.getsize(review_path)} байт")
-            else:
-                print(f"❌ Файл НЕ создан после download_to_drive")
-        except Exception as e:
-            print(f"❌ Ошибка сохранения: {e}")
-            fallback_path = os.path.join(base_dir, f"{timestamp}.jpg")
-            print(f"🔄 Попытка сохранить в fallback: {fallback_path}")
-            await file.download_to_drive(fallback_path)
-            if os.path.exists(fallback_path):
-                print(f"✅ Fallback сохранён: {fallback_path}")
-                review_path = fallback_path
-            else:
-                print("❌ Fallback тоже не сработал")
+        await file.download_to_drive(review_path)
+        print(f"✅ Фото сохранено: {review_path}")
 
         response = f"🔍 **Defect found:**\n{info['text']}\n\n📸 Photo saved for manual verification.\n🕒 Awaiting confirmation."
         if info.get("normative"):
@@ -308,6 +292,51 @@ async def button_callback(update, context):
         )
         context.user_data['report_data'] = []
 
+# ===== COMMAND /review (только для владельца) =====
+async def review_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⛔ This command is not available to you.")
+        return
+
+    review_dir = os.path.join(os.getcwd(), "review")
+    if not os.path.exists(review_dir):
+        await update.message.reply_text("📭 Папка review пуста или не существует.")
+        return
+
+    # Собираем все фото из review (рекурсивно)
+    photo_paths = []
+    for root, dirs, files in os.walk(review_dir):
+        for f in files:
+            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                photo_paths.append(os.path.join(root, f))
+
+    if not photo_paths:
+        await update.message.reply_text("📭 В папке review нет фото.")
+        return
+
+    await update.message.reply_text(f"📸 Найдено {len(photo_paths)} фото. Отправляю...")
+
+    # Отправляем по 10 фото за раз, чтобы не перегружать
+    for i in range(0, len(photo_paths), 10):
+        batch = photo_paths[i:i+10]
+        media_group = []
+        for path in batch:
+            try:
+                with open(path, 'rb') as f:
+                    media_group.append(InputMediaPhoto(media=f))
+            except Exception as e:
+                print(f"Ошибка открытия {path}: {e}")
+        if media_group:
+            try:
+                await update.message.reply_media_group(media_group)
+            except Exception as e:
+                await update.message.reply_text(f"❌ Ошибка отправки группы: {e}")
+        else:
+            await update.message.reply_text("⚠️ Не удалось загрузить фото для отправки.")
+
+    await update.message.reply_text("✅ Все фото отправлены.")
+
 # ===== START =====
 if __name__ == "__main__":
     download_and_extract_photos()
@@ -317,5 +346,6 @@ if __name__ == "__main__":
     app = Application.builder().token(TOKEN).read_timeout(60).build()
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
+    app.add_handler(CommandHandler("review", review_command))
     print("🚀 Bot started. Waiting for photos...")
     app.run_polling()
