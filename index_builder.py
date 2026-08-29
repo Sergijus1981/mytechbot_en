@@ -8,19 +8,21 @@ from PIL import Image
 from torchvision import transforms
 from ultralytics import YOLO
 
-# ===== НАСТРОЙКИ (относительные пути) =====
-DB_PATH = "photo_db"                     # папка с фото в той же директории
-MODEL_PATH = "yolov8n-cls.pt"            # модель рядом со скриптом
+# ===== НАСТРОЙКИ =====
+DB_PATH = "photo_db"
+MODEL_PATH = "yolov8n-cls.pt"
 
 # ===== ЗАГРУЗКА МОДЕЛИ =====
-print("Загружаем модель...")
-model = YOLO(MODEL_PATH)
+print("Загружаю модель...")
+if not os.path.exists(MODEL_PATH):
+    print(f"❌ Ошибка: файл {MODEL_PATH} не найден!")
+    exit(1)
 
-# Отрезаем классификатор
+model = YOLO(MODEL_PATH)
 torch_model = model.model.model
 embedder = torch.nn.Sequential(*list(torch_model.children())[:-1])
 embedder.eval()
-print("Модель загружена.")
+print("✅ Модель загружена.")
 
 # ===== ТРАНСФОРМАЦИИ =====
 transform = transforms.Compose([
@@ -40,14 +42,16 @@ def get_embedding(image_path):
         print(f"Ошибка при обработке {image_path}: {e}")
         return None
 
-# ===== ИНДЕКСАЦИЯ =====
-print("Поиск изображений в папке:", DB_PATH)
-image_paths = list(Path(DB_PATH).glob("*.jpg")) + \
-              list(Path(DB_PATH).glob("*.jpeg")) + \
-              list(Path(DB_PATH).glob("*.png"))
+# ===== ПОИСК ФАЙЛОВ ВО ВСЕХ ПОДПАПКАХ =====
+print(f"Поиск изображений в папке: {DB_PATH} (рекурсивно)")
+
+# Собираем все файлы с расширениями .jpg, .jpeg, .png из всех подпапок
+image_paths = []
+for ext in ['*.jpg', '*.jpeg', '*.png']:
+    image_paths.extend(Path(DB_PATH).rglob(ext))
 
 if not image_paths:
-    print("В папке не найдено изображений!")
+    print(f"❌ В папке {DB_PATH} и её подпапках не найдено изображений!")
     exit(1)
 
 print(f"Найдено {len(image_paths)} изображений. Начинаю индексацию...")
@@ -65,7 +69,7 @@ for i, img_path in enumerate(image_paths):
         print(f"  пропущено")
 
 if not embeddings:
-    print("Не удалось получить ни одного эмбеддинга. Проверь модель и изображения.")
+    print("❌ Не удалось получить ни одного эмбеддинга. Проверь модель и изображения.")
     exit(1)
 
 embeddings = np.array(embeddings).astype('float32')
@@ -80,5 +84,5 @@ faiss.write_index(index, "faiss_index.bin")
 with open("image_paths.pkl", "wb") as f:
     pickle.dump(valid_paths, f)
 
-print(f"Готово! Индекс сохранён в faiss_index.bin")
-print(f"Всего занесено {len(valid_paths)} изображений.")
+print(f"✅ Готово! Индекс сохранён в faiss_index.bin")
+print(f"✅ Всего занесено {len(valid_paths)} изображений.")
