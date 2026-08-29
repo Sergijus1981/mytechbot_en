@@ -5,7 +5,7 @@ import gdown
 import requests
 import numpy as np
 import faiss
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
 import torch
@@ -28,7 +28,6 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
-OWNER_ID = 8743362338  # твой Telegram ID (только ты сможешь использовать /review)
 
 # ===== CATEGORY DATA =====
 CATEGORY_DATA = [
@@ -292,19 +291,13 @@ async def button_callback(update, context):
         )
         context.user_data['report_data'] = []
 
-# ===== COMMAND /review (только для владельца) =====
+# ===== COMMAND /review (без проверки владельца) =====
 async def review_command(update, context):
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("⛔ This command is not available to you.")
-        return
-
     review_dir = os.path.join(os.getcwd(), "review")
     if not os.path.exists(review_dir):
         await update.message.reply_text("📭 Папка review пуста или не существует.")
         return
 
-    # Собираем все фото из review (рекурсивно)
     photo_paths = []
     for root, dirs, files in os.walk(review_dir):
         for f in files:
@@ -317,23 +310,13 @@ async def review_command(update, context):
 
     await update.message.reply_text(f"📸 Найдено {len(photo_paths)} фото. Отправляю...")
 
-    # Отправляем по 10 фото за раз, чтобы не перегружать
-    for i in range(0, len(photo_paths), 10):
-        batch = photo_paths[i:i+10]
-        media_group = []
-        for path in batch:
-            try:
-                with open(path, 'rb') as f:
-                    media_group.append(InputMediaPhoto(media=f))
-            except Exception as e:
-                print(f"Ошибка открытия {path}: {e}")
-        if media_group:
-            try:
-                await update.message.reply_media_group(media_group)
-            except Exception as e:
-                await update.message.reply_text(f"❌ Ошибка отправки группы: {e}")
-        else:
-            await update.message.reply_text("⚠️ Не удалось загрузить фото для отправки.")
+    for path in photo_paths:
+        try:
+            with open(path, 'rb') as f:
+                await update.message.reply_photo(photo=f)
+        except Exception as e:
+            print(f"❌ Ошибка отправки {path}: {e}")
+            await update.message.reply_text(f"❌ Не удалось отправить: {os.path.basename(path)}")
 
     await update.message.reply_text("✅ Все фото отправлены.")
 
