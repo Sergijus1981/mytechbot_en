@@ -73,7 +73,7 @@ try:
     print("✅ DejaVuSans font loaded")
 except:
     FONT_NAME = 'Helvetica'
-    print("⚠️ DejaVuSans not found")
+    print("⚠️ DejaVuSans not found, using Helvetica")
 
 # ===== KEYBOARD =====
 def get_report_keyboard():
@@ -155,7 +155,7 @@ def download_and_extract_etalons():
     os.remove("etalons.zip")
     print("✅ Etalons ready.")
 
-# ===== INDEX, MODEL, etc. =====
+# ===== INDEX, MODEL =====
 def load_index():
     global index, image_paths
     if index is None:
@@ -216,7 +216,7 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLE PHOTO (with diagnostics) =====
+# ===== HANDLE PHOTO (with diagnostics and absolute path) =====
 async def handle_photo(update, context):
     try:
         load_index()
@@ -241,15 +241,32 @@ async def handle_photo(update, context):
         full_path = image_paths[idx]
         info = get_category_info(full_path)
 
-        # ---- Сохранение в review с диагностикой ----
+        # ---- Сохранение в review с абсолютным путём и диагностикой ----
+        base_dir = os.getcwd()  # /opt/render/project/src
         category_folder = info.get("etalon_prefix", "unknown")
-        review_dir = os.path.join("review", category_folder)
+        review_dir = os.path.join(base_dir, "review", category_folder)
         os.makedirs(review_dir, exist_ok=True)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         review_path = os.path.join(review_dir, f"{timestamp}.jpg")
-        print(f"📂 Сохраняю фото в: {review_path}")   # <-- диагностика
-        await file.download_to_drive(review_path)
-        print(f"✅ Фото сохранено: {review_path}")    # <-- диагностика
+        print(f"📂 Сохраняю фото в: {review_path}")
+        print(f"📁 Папка существует: {os.path.exists(review_dir)}")
+        try:
+            await file.download_to_drive(review_path)
+            print(f"✅ Фото сохранено: {review_path}")
+            if os.path.exists(review_path):
+                print(f"✅ Файл существует, размер: {os.path.getsize(review_path)} байт")
+            else:
+                print(f"❌ Файл НЕ создан после download_to_drive")
+        except Exception as e:
+            print(f"❌ Ошибка сохранения: {e}")
+            fallback_path = os.path.join(base_dir, f"{timestamp}.jpg")
+            print(f"🔄 Попытка сохранить в fallback: {fallback_path}")
+            await file.download_to_drive(fallback_path)
+            if os.path.exists(fallback_path):
+                print(f"✅ Fallback сохранён: {fallback_path}")
+                review_path = fallback_path
+            else:
+                print("❌ Fallback тоже не сработал")
 
         response = f"🔍 **Defect found:**\n{info['text']}\n\n📸 Photo saved for manual verification.\n🕒 Awaiting confirmation."
         if info.get("normative"):
