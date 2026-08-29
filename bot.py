@@ -233,6 +233,19 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
     ])
 
+def get_review_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("🏷️ Бирки", callback_data="review_birki")],
+        [InlineKeyboardButton("⛓️ Заземление", callback_data="review_zazemlenie")],
+        [InlineKeyboardButton("🔌 Проходки", callback_data="review_prohodki")],
+        [InlineKeyboardButton("🔩 Шпильки", callback_data="review_shpilki")],
+        [InlineKeyboardButton("🧪 Окислы", callback_data="review_oksidy")],
+        [InlineKeyboardButton("📄 Схема", callback_data="review_shema")],
+        [InlineKeyboardButton("❌ Отклонить", callback_data="review_reject")],
+        [InlineKeyboardButton("⏭️ Пропустить", callback_data="review_skip")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 # ===== PDF GENERATION =====
 def generate_pdf_report(report_data, chat_id, lang):
     buffer = io.BytesIO()
@@ -415,13 +428,12 @@ async def handle_photo(update, context):
         os.remove(user_path)
 
         emb = np.array([emb]).astype('float32')
-        distances, indices = index.search(emb, 3)  # ищем 3 самых похожих
+        distances, indices = index.search(emb, 3)
 
         if len(indices[0]) == 0 or indices[0][0] == -1:
             await update.message.reply_text(t['no_match'])
             return
 
-        # Сохраняем фото в review (для последующей классификации)
         base_dir = os.getcwd()
         review_dir = os.path.join(base_dir, "review")
         os.makedirs(review_dir, exist_ok=True)
@@ -431,7 +443,6 @@ async def handle_photo(update, context):
         await file.download_to_drive(review_path)
         print(f"✅ Фото сохранено в review: {review_path}")
 
-        # Собираем уникальные замечания (до 3)
         unique_defects = []
         seen = set()
         for idx in indices[0]:
@@ -448,14 +459,12 @@ async def handle_photo(update, context):
             await update.message.reply_text(t['no_match'])
             return
 
-        # Формируем ответ
         response = t['defects_list'] + "\n"
         for i, defect in enumerate(unique_defects, 1):
             response += f"{i}. {defect['text']}\n"
             if defect.get('normative'):
                 response += f"   {t['standard']} {defect['normative']}\n"
 
-        # Сохраняем замечания в сессию для предписания
         if 'report_data' not in context.user_data:
             context.user_data['report_data'] = []
         for defect in unique_defects:
@@ -465,7 +474,6 @@ async def handle_photo(update, context):
                 'photo_path': review_path
             })
 
-        # Отправляем эталон (первое найденное)
         etalon_path = find_etalon(unique_defects[0].get("etalon_prefix"))
         if etalon_path and os.path.exists(etalon_path):
             with open(etalon_path, 'rb') as f:
@@ -506,6 +514,86 @@ async def button_callback(update, context):
         t_new = TRANSLATIONS[new_lang]
         await query.edit_message_text(t_new['language_set'])
 
+    elif query.data.startswith("review_"):
+        # Обработка кнопок классификации в /review
+        action = query.data.split("_")[1]
+        # Получаем текущий список фото в review
+        base_dir = os.getcwd()
+        review_dir = os.path.join(base_dir, "review")
+        if not os.path.exists(review_dir):
+            await query.edit_message_text("📭 Папка review не найдена.")
+            return
+
+        # Ищем первое фото в review
+        photo_files = []
+        for f in os.listdir(review_dir):
+            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                photo_files.append(os.path.join(review_dir, f))
+        if not photo_files:
+            await query.edit_message_text("📭 В папке review нет фото.")
+            return
+
+        photo_path = photo_files[0]
+        filename = os.path.basename(photo_path)
+
+        if action == "skip":
+            await query.edit_message_text("⏭️ Пропущено. Следующее фото...")
+            # Показываем следующее фото
+            photo_files.pop(0)
+            if photo_files:
+                next_path = photo_files[0]
+                with open(next_path, 'rb') as f:
+                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
+            else:
+                await query.message.reply_text("✅ Все фото обработаны.")
+            return
+
+        elif action == "reject":
+            os.remove(photo_path)
+            await query.edit_message_text("❌ Фото отклонено и удалено.")
+            # Показываем следующее
+            photo_files.pop(0)
+            if photo_files:
+                next_path = photo_files[0]
+                with open(next_path, 'rb') as f:
+                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
+            else:
+                await query.message.reply_text("✅ Все фото обработаны.")
+            return
+
+        else:
+            # Определяем категорию по нажатой кнопке
+            category_map = {
+                "birki": "01_otsutstvuyut_birki",
+                "zazemlenie": "03_zazemlenie_ne_vypolneno",
+                "prohodki": "02_zadelka_prohodok",
+                "shpilki": "04_shpilki_lotka_ne_srezany",
+                "oksidy": "05_oksidy_rzhavchina",
+                "shema": "06_otsutstvie_shemy"
+            }
+            target_category = category_map.get(action)
+            if not target_category:
+                await query.edit_message_text("❌ Неизвестная категория.")
+                return
+
+            # Копируем фото в папку photo_db
+            photo_db_dir = os.path.join(base_dir, "photo_db", target_category)
+            os.makedirs(photo_db_dir, exist_ok=True)
+            dest_path = os.path.join(photo_db_dir, filename)
+            shutil.copy2(photo_path, dest_path)
+            os.remove(photo_path)  # удаляем из review
+
+            await query.edit_message_text(f"✅ Фото добавлено в категорию: {target_category}")
+
+            # Удаляем обработанное фото из списка
+            photo_files.pop(0)
+            if photo_files:
+                next_path = photo_files[0]
+                with open(next_path, 'rb') as f:
+                    await query.message.reply_photo(photo=f, caption="📸 Классифицируйте это фото:", reply_markup=get_review_keyboard())
+            else:
+                await query.message.reply_text("✅ Все фото обработаны.")
+
 # ===== COMMANDS =====
 async def start_command(update, context):
     user_id = update.effective_user.id
@@ -542,15 +630,14 @@ async def review_command(update, context):
         await update.message.reply_text(t['review_empty'])
         return
 
-    await update.message.reply_text(t['review_photos_found'].format(count=len(photo_paths)))
-    for path in photo_paths:
-        try:
-            with open(path, 'rb') as f:
-                await update.message.reply_photo(photo=f)
-        except Exception as e:
-            print(f"❌ Ошибка отправки {path}: {e}")
-            await update.message.reply_text(f"❌ Не удалось отправить: {os.path.basename(path)}")
-    await update.message.reply_text(t['review_done'])
+    # Отправляем первое фото с кнопками
+    first_path = photo_paths[0]
+    with open(first_path, 'rb') as f:
+        await update.message.reply_photo(
+            photo=f,
+            caption="📸 Классифицируйте это фото:",
+            reply_markup=get_review_keyboard()
+        )
 
 async def stats_command(update, context):
     user_id = update.effective_user.id
