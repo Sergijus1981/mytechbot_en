@@ -57,7 +57,6 @@ CATEGORY_DATA = [
     ),
 ]
 
-# Global variables
 index = None
 image_paths = None
 embedder = None
@@ -81,17 +80,17 @@ def get_report_keyboard():
     keyboard = [[InlineKeyboardButton("📄 Generate Report", callback_data="generate_report")]]
     return InlineKeyboardMarkup(keyboard)
 
-# ===== PDF GENERATION (исправлена) =====
+# ===== PDF GENERATION =====
 def generate_pdf_report(report_data, chat_id):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
-    
+
     for style_name in styles.byName:
         styles[style_name].fontName = FONT_NAME
-    
+
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
-    
+
     story = []
     story.append(Paragraph("📋 Electrical Inspection Report", title_style))
     story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
@@ -102,13 +101,12 @@ def generate_pdf_report(report_data, chat_id):
             story.append(Paragraph(f"<b>Defect #{i}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
             story.append(Paragraph(f"📜 Standard: {item.get('normative', '—')}", styles['Normal']))
-            # Исправленная универсальная рекомендация
             story.append(Paragraph(
                 "🛠 Recommended action: Bring into compliance with "
                 "the requirements of applicable regulatory and technical documents (RTD).",
                 styles['Normal']
             ))
-            
+
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
@@ -116,7 +114,7 @@ def generate_pdf_report(report_data, chat_id):
                     story.append(Paragraph("📸 Actual photo", styles['Normal']))
                 except:
                     story.append(Paragraph("⚠️ Photo not available", styles['Normal']))
-            
+
             story.append(Spacer(1, 6*mm))
             story.append(PageBreak())
     else:
@@ -154,7 +152,7 @@ def download_and_extract_etalons():
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons already exists, skipping download.")
         return
-    print("📥 Downloading etalons archive...")
+    print("📥 Downloading etalons archive via requests...")
     response = requests.get(ETALONS_URL, stream=True)
     with open("etalons.zip", "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
@@ -252,7 +250,6 @@ async def handle_photo(update, context):
         full_path = image_paths[idx]
         info = get_category_info(full_path)
 
-        # Save original photo to review/ folder for manual verification
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join("review", category_folder)
         os.makedirs(review_dir, exist_ok=True)
@@ -264,7 +261,6 @@ async def handle_photo(update, context):
         if info.get("normative"):
             response += f"\n📜 Standard: {info['normative']}"
 
-        # Send etalon
         etalon_path = find_etalon(info.get("etalon_prefix"))
         if etalon_path and os.path.exists(etalon_path):
             with open(etalon_path, 'rb') as f:
@@ -272,7 +268,6 @@ async def handle_photo(update, context):
         else:
             await update.message.reply_text(response, reply_markup=get_report_keyboard())
 
-        # Store in session for report
         if 'report_data' not in context.user_data:
             context.user_data['report_data'] = []
         context.user_data['report_data'].append({
