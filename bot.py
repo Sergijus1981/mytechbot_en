@@ -2,6 +2,7 @@ import os
 import pickle
 import zipfile
 import gdown
+import requests
 import numpy as np
 import faiss
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -22,8 +23,9 @@ import datetime
 import shutil
 
 # ===== CONFIG =====
-TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"  # NEW TOKEN
+TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
+ETALONS_URL = "https://www.dropbox.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&st=4rnmwqxp&dl=0"  
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
@@ -62,7 +64,7 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== FONT REGISTRATION FOR CYRILLIC (still needed if we keep some Russian, but we'll use DejaVu for English too) =====
+# ===== FONT REGISTRATION =====
 try:
     pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
     addMapping('DejaVuSans', 0, 0, 'DejaVuSans')
@@ -147,6 +149,22 @@ def download_and_extract_photos():
                     os.rename(f, os.path.join("photo_db", f))
     print(f"✅ photo_db ready, {len(os.listdir('photo_db'))} files.")
 
+# ===== AUTO-DOWNLOAD ETALONS (NEW) =====
+def download_and_extract_etalons():
+    if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
+        print("📁 etalons already exists, skipping download.")
+        return
+    print("📥 Downloading etalons archive via requests...")
+    response = requests.get(ETALONS_URL, stream=True)
+    with open("etalons.zip", "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print("📦 Extracting...")
+    with zipfile.ZipFile("etalons.zip", "r") as zip_ref:
+        zip_ref.extractall(".")
+    os.remove("etalons.zip")
+    print("✅ Etalons ready.")
+
 # ===== LOAD INDEX =====
 def load_index():
     global index, image_paths
@@ -209,7 +227,7 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLE PHOTO (with saving to review/) =====
+# ===== HANDLE PHOTO =====
 async def handle_photo(update, context):
     try:
         load_index()
@@ -287,6 +305,7 @@ async def button_callback(update, context):
 # ===== START =====
 if __name__ == "__main__":
     download_and_extract_photos()
+    download_and_extract_etalons()  # <-- новая строка
     load_index()
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
