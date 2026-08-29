@@ -10,7 +10,7 @@ from ultralytics import YOLO
 
 # ===== НАСТРОЙКИ =====
 DB_PATH = "photo_db"
-MODEL_PATH = "yolov8n-cls.pt"
+MODEL_PATH = "best.pt"   # используем обученную модель
 
 # ===== ЗАГРУЗКА МОДЕЛИ =====
 print("Загружаю модель...")
@@ -45,7 +45,6 @@ def get_embedding(image_path):
 # ===== ПОИСК ФАЙЛОВ ВО ВСЕХ ПОДПАПКАХ =====
 print(f"Поиск изображений в папке: {DB_PATH} (рекурсивно)")
 
-# Собираем все файлы с расширениями .jpg, .jpeg, .png из всех подпапок
 image_paths = []
 for ext in ['*.jpg', '*.jpeg', '*.png']:
     image_paths.extend(Path(DB_PATH).rglob(ext))
