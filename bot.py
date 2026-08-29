@@ -29,31 +29,31 @@ INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 
-# ===== CATEGORY DATA (ENGLISH) =====
+# ===== CATEGORY DATA =====
 CATEGORY_DATA = [
     (
         "01_otsutstvuyut_birki",
         "⚠️ Missing cable/equipment labels (tags).",
         "birki_etalon",
-        "IEC 60445 (Terminal marking), NEC 110.22 (Equipment Marking), BS 7671 514.9 (Identification)"
+        "IEC 60445, NEC 110.22, BS 7671 514.9"
     ),
     (
         "02_zadelka_prohodok",
-        "⚠️ Gaps in cable penetrations (tubes, ducts, openings) not sealed.",
+        "⚠️ Gaps in cable penetrations not sealed.",
         "prohodki_etalon",
-        "IEC 60364-5-52, NEC 300.21 (Firestopping), BS 7671 527.2 (Sealing of openings)"
+        "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"
     ),
     (
         "03_zazemlenie_ne_vypolneno",
         "⚠️ Earthing not provided or does not meet standards.",
         "zazemlenie_etalon",
-        "IEC 60364-4-41, NEC 250.4 (General requirements for grounding), BS 7671 411.3 (Protective earthing)"
+        "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"
     ),
     (
         "04_shpilki_lotka_ne_srezany",
-        "⚠️ Cable tray studs not trimmed (risk of injury and cable damage).",
+        "⚠️ Cable tray studs not trimmed.",
         "shpilki_etalon",
-        "IEC 61537 (Cable tray systems), NEC 392.18 (Cable tray installation), BS 7671 522.8 (Mechanical protection)"
+        "IEC 61537, NEC 392.18, BS 7671 522.8"
     ),
 ]
 
@@ -62,7 +62,7 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== FONT REGISTRATION =====
+# ===== FONT =====
 try:
     pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
     addMapping('DejaVuSans', 0, 0, 'DejaVuSans')
@@ -73,7 +73,7 @@ try:
     print("✅ DejaVuSans font loaded")
 except:
     FONT_NAME = 'Helvetica'
-    print("⚠️ DejaVuSans not found, using Helvetica (no Cyrillic support)")
+    print("⚠️ DejaVuSans not found")
 
 # ===== KEYBOARD =====
 def get_report_keyboard():
@@ -85,17 +85,13 @@ def generate_pdf_report(report_data, chat_id):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
-
     for style_name in styles.byName:
         styles[style_name].fontName = FONT_NAME
-
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
-
     story = []
     story.append(Paragraph("📋 Electrical Inspection Report", title_style))
     story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
     story.append(Spacer(1, 12*mm))
-
     if report_data:
         for i, item in enumerate(report_data, 1):
             story.append(Paragraph(f"<b>Defect #{i}</b>", styles['Heading2']))
@@ -106,25 +102,22 @@ def generate_pdf_report(report_data, chat_id):
                 "the requirements of applicable regulatory and technical documents (RTD).",
                 styles['Normal']
             ))
-
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
                     story.append(img)
                     story.append(Paragraph("📸 Actual photo", styles['Normal']))
-                except:
-                    story.append(Paragraph("⚠️ Photo not available", styles['Normal']))
-
+                except Exception as e:
+                    story.append(Paragraph(f"⚠️ Photo error: {e}", styles['Normal']))
             story.append(Spacer(1, 6*mm))
             story.append(PageBreak())
     else:
         story.append(Paragraph("No defects recorded.", styles['Normal']))
-
     doc.build(story)
     buffer.seek(0)
     return buffer
 
-# ===== AUTO-DOWNLOAD PHOTOS =====
+# ===== DOWNLOADS =====
 def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db already exists, skipping download.")
@@ -147,7 +140,6 @@ def download_and_extract_photos():
                     os.rename(f, os.path.join("photo_db", f))
     print(f"✅ photo_db ready, {len(os.listdir('photo_db'))} files.")
 
-# ===== AUTO-DOWNLOAD ETALONS =====
 def download_and_extract_etalons():
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons already exists, skipping download.")
@@ -163,7 +155,7 @@ def download_and_extract_etalons():
     os.remove("etalons.zip")
     print("✅ Etalons ready.")
 
-# ===== LOAD INDEX =====
+# ===== INDEX, MODEL, etc. =====
 def load_index():
     global index, image_paths
     if index is None:
@@ -174,7 +166,6 @@ def load_index():
         image_paths = [os.path.join("photo_db", os.path.basename(p)) for p in raw_paths]
         print(f"Index loaded, {len(image_paths)} images.")
 
-# ===== LOAD MODEL =====
 def load_model():
     global embedder, transform
     if embedder is None:
@@ -225,7 +216,7 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLE PHOTO =====
+# ===== HANDLE PHOTO (with diagnostics) =====
 async def handle_photo(update, context):
     try:
         load_index()
@@ -250,12 +241,15 @@ async def handle_photo(update, context):
         full_path = image_paths[idx]
         info = get_category_info(full_path)
 
+        # ---- Сохранение в review с диагностикой ----
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join("review", category_folder)
         os.makedirs(review_dir, exist_ok=True)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         review_path = os.path.join(review_dir, f"{timestamp}.jpg")
+        print(f"📂 Сохраняю фото в: {review_path}")   # <-- диагностика
         await file.download_to_drive(review_path)
+        print(f"✅ Фото сохранено: {review_path}")    # <-- диагностика
 
         response = f"🔍 **Defect found:**\n{info['text']}\n\n📸 Photo saved for manual verification.\n🕒 Awaiting confirmation."
         if info.get("normative"):
