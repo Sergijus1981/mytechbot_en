@@ -56,7 +56,8 @@ TRANSLATIONS = {
         "classify_prompt": "📸 Classify this photo:",
         "classify_success": "✅ Photo added to {category}",
         "classify_skipped": "⏭️ Photo skipped",
-        "classify_rejected": "❌ Photo rejected and deleted"
+        "classify_rejected": "❌ Photo rejected and deleted",
+        "no_photos_left": "✅ All photos classified."
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -78,7 +79,8 @@ TRANSLATIONS = {
         "classify_prompt": "📸 Классифицируйте это фото:",
         "classify_success": "✅ Фото добавлено в категорию {category}",
         "classify_skipped": "⏭️ Фото пропущено",
-        "classify_rejected": "❌ Фото отклонено и удалено"
+        "classify_rejected": "❌ Фото отклонено и удалено",
+        "no_photos_left": "✅ Все фото классифицированы."
     }
 }
 
@@ -361,6 +363,14 @@ def rebuild_index():
     """Перестраивает индекс FAISS."""
     print("🔄 Перестраиваю индекс...")
     try:
+        # Проверяем, что index_builder.py существует
+        if not os.path.exists("index_builder.py"):
+            print("❌ index_builder.py не найден")
+            return False
+        # Проверяем, что папка photo_db существует
+        if not os.path.exists("photo_db"):
+            print("❌ photo_db не найдена")
+            return False
         subprocess.run(["python", "index_builder.py"], check=True)
         print("✅ Индекс перестроен.")
         return True
@@ -600,7 +610,7 @@ async def button_callback(update, context):
             with open(next_photo, 'rb') as f:
                 await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_classify_keyboard(lang))
         else:
-            await query.message.reply_text(t['review_done'])
+            await query.message.reply_text(t['no_photos_left'])
 
 # ===== COMMANDS =====
 async def start_command(update, context):
