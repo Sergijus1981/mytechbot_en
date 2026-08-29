@@ -6,9 +6,7 @@ import requests
 import numpy as np
 import faiss
 import sqlite3
-import io
-import datetime as dt
-from datetime import timedelta
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
@@ -22,11 +20,8 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.fonts import addMapping
-
-# Импорт для определения языка и переводов
-from langdetect import detect
-from langdetect.lang_detect_exception import LangDetectException
-from translations import TRANSLATIONS, get_text
+import io
+import datetime as dt
 
 # ===== CONFIG =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
@@ -35,41 +30,77 @@ ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/et
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
-OWNER_ID = 8743362338
+OWNER_ID = 8743362338  # только для статистики
 
-# ===== CATEGORY DATA =====
+# ===== TRANSLATIONS =====
+TRANSLATIONS = {
+    "en": {
+        "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
+        "language_set": "✅ Language set to English. Send a photo of electrical installation.",
+        "defect_found": "🔍 **Defect found:**",
+        "standard": "📜 Standard:",
+        "photo_saved": "📸 Photo saved for manual verification.",
+        "awaiting": "🕒 Awaiting confirmation.",
+        "unknown_defect": "📌 Unknown defect (file: {name})",
+        "no_match": "❌ Could not find a matching image in the database.",
+        "report_ready": "📄 Your report is ready!",
+        "no_defects": "📭 No defects recorded. Please send photos first.",
+        "review_empty": "📭 Review folder is empty or does not exist.",
+        "review_photos_found": "📸 Found {count} photos. Sending...",
+        "review_done": "✅ All photos sent.",
+        "stats": "📊 Bot Statistics:\n👥 Total users: {total}\n📈 New today: {today}\n📅 New this week: {week}",
+        "stats_unauthorized": "⛔ You are not authorized to view statistics.",
+        "language_prompt": "🌐 Please choose your language:",
+        "choose_language": "🌐 Choose your language:",
+        "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD)."
+    },
+    "ru": {
+        "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
+        "language_set": "✅ Язык установлен на русский. Отправьте фото электроустановки.",
+        "defect_found": "🔍 **Найдено замечание:**",
+        "standard": "📜 Норматив:",
+        "photo_saved": "📸 Фото сохранено для ручной проверки.",
+        "awaiting": "🕒 Ожидайте подтверждения.",
+        "unknown_defect": "📌 Неизвестное замечание (файл: {name})",
+        "no_match": "❌ Не удалось найти похожее изображение в базе.",
+        "report_ready": "📄 Ваш отчёт готов!",
+        "no_defects": "📭 Нет замечаний для отчёта. Сначала отправьте фотографии.",
+        "review_empty": "📭 Папка review пуста или не существует.",
+        "review_photos_found": "📸 Найдено {count} фото. Отправляю...",
+        "review_done": "✅ Все фото отправлены.",
+        "stats": "📊 Статистика бота:\n👥 Всего пользователей: {total}\n📈 Новых сегодня: {today}\n📅 За неделю: {week}",
+        "stats_unauthorized": "⛔ Вы не авторизованы для просмотра статистики.",
+        "language_prompt": "🌐 Пожалуйста, выберите язык:",
+        "choose_language": "🌐 Выберите язык:",
+        "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД)."
+    }
+}
+
+# ===== CATEGORY DATA (always in English for internal logic) =====
 CATEGORY_DATA = [
     (
         "01_otsutstvuyut_birki",
-        {"ru": "⚠️ Отсутствуют бирки на оборудовании (кабелях, муфтах, аппаратах).",
-         "en": "⚠️ Missing cable/equipment labels (tags)."},
+        "⚠️ Missing cable/equipment labels (tags).",
         "birki_etalon",
-        {"ru": "ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8",
-         "en": "IEC 60445, NEC 110.22, BS 7671 514.9"}
+        "IEC 60445, NEC 110.22, BS 7671 514.9"
     ),
     (
         "02_zadelka_prohodok",
-        {"ru": "⚠️ Не выполнена заделка проходок (зазоры в трубах, коробах, проёмах).",
-         "en": "⚠️ Gaps in cable penetrations not sealed."},
+        "⚠️ Gaps in cable penetrations not sealed.",
         "prohodki_etalon",
-        {"ru": "СП 76.13330.2016 п. 6.4.1.25",
-         "en": "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}
+        "IEC 60364-5-52, NEC 300.21, BS 7671 527.2"
     ),
     (
         "03_zazemlenie_ne_vypolneno",
-        {"ru": "⚠️ Не выполнено заземление (или не соответствует нормам).",
-         "en": "⚠️ Earthing not provided or does not meet standards."},
+        "⚠️ Earthing not provided or does not meet standards.",
         "zazemlenie_etalon",
-        {"ru": "ПУЭ п. 1.7.76",
-         "en": "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}
+        "IEC 60364-4-41, NEC 250.4, BS 7671 411.3"
     ),
     (
         "04_shpilki_lotka_ne_srezany",
-        {"ru": "⚠️ Шпильки лотка не срезаны (опасность травматизма и повреждения кабелей).",
-         "en": "⚠️ Cable tray studs not trimmed."},
+        "⚠️ Cable tray studs not trimmed.",
         "shpilki_etalon",
-        {"ru": "ГОСТ Р 50571.5.52-2011",
-         "en": "IEC 61537, NEC 392.18, BS 7671 522.8"}
+        "IEC 61537, NEC 392.18, BS 7671 522.8"
     ),
 ]
 
@@ -83,32 +114,34 @@ def init_db():
         user_id INTEGER PRIMARY KEY,
         first_seen TEXT,
         last_seen TEXT,
-        lang TEXT DEFAULT 'en'
+        language TEXT DEFAULT 'en'
     )''')
     conn.commit()
     conn.close()
 
-def register_user(user_id, lang='en'):
+def register_user(user_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     now = dt.datetime.now().isoformat()
-    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, lang) VALUES (?, ?, ?, ?)",
-              (user_id, now, now, lang))
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, language) VALUES (?, ?, ?, 'en')",
+              (user_id, now, now))
     c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
     conn.commit()
     conn.close()
 
-def get_user_lang(user_id):
+def get_user_language(user_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    lang = c.execute("SELECT lang FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    lang = c.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
-    return lang[0] if lang else 'en'
+    if lang:
+        return lang[0]
+    return "en"  # default
 
-def update_user_lang(user_id, lang):
+def set_user_language(user_id, lang):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("UPDATE users SET lang = ? WHERE user_id = ?", (lang, user_id))
+    c.execute("UPDATE users SET language = ? WHERE user_id = ?", (lang, user_id))
     conn.commit()
     conn.close()
 
@@ -127,20 +160,6 @@ def get_stats():
     conn.close()
     return total, today_count, week_count
 
-# ===== LANGUAGE DETECTION =====
-def detect_language(text):
-    if not text:
-        return 'en'
-    try:
-        lang = detect(text)
-        # Поддерживаем только русский и английский
-        if lang == 'ru':
-            return 'ru'
-        else:
-            return 'en'
-    except LangDetectException:
-        return 'en'
-
 # ===== GLOBALS =====
 index = None
 image_paths = None
@@ -158,17 +177,18 @@ try:
     print("✅ DejaVuSans font loaded")
 except:
     FONT_NAME = 'Helvetica'
-    print("⚠️ DejaVuSans not found")
+    print("⚠️ DejaVuSans not found, using Helvetica")
 
 # ===== KEYBOARDS =====
 def get_report_keyboard(lang):
-    keyboard = [[InlineKeyboardButton(get_text(lang, 'generate_report'), callback_data="generate_report")]]
+    text = "📄 Generate Report" if lang == "en" else "📄 Сформировать отчёт"
+    keyboard = [[InlineKeyboardButton(text, callback_data="generate_report")]]
     return InlineKeyboardMarkup(keyboard)
 
 def get_language_keyboard():
     keyboard = [
-        [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
+        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
+        [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -181,30 +201,27 @@ def generate_pdf_report(report_data, chat_id, lang):
         styles[style_name].fontName = FONT_NAME
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT_NAME)
     story = []
-    title = "📋 Electrical Inspection Report" if lang == 'en' else "📋 Отчёт по технадзору"
+    title = "📋 Electrical Inspection Report" if lang == "en" else "📋 Отчёт по технадзору"
     story.append(Paragraph(title, title_style))
     story.append(Paragraph(f"Date: {dt.datetime.now().strftime('%d.%m.%Y %H:%M')}", styles['Normal']))
     story.append(Spacer(1, 12*mm))
     if report_data:
         for i, item in enumerate(report_data, 1):
-            story.append(Paragraph(f"<b>{get_text(lang, 'defect').format(i)}</b>", styles['Heading2']))
+            story.append(Paragraph(f"<b>{'Defect' if lang == 'en' else 'Замечание'} #{i}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
-            story.append(Paragraph(f"📜 {get_text(lang, 'standard')}: {item.get('normative', '—')}", styles['Normal']))
-            story.append(Paragraph(
-                get_text(lang, 'recommendation'),
-                styles['Normal']
-            ))
+            story.append(Paragraph(f"{'📜 Standard:' if lang == 'en' else '📜 Норматив:'} {item.get('normative', '—')}", styles['Normal']))
+            story.append(Paragraph(TRANSLATIONS[lang]['report_action'], styles['Normal']))
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
                     story.append(img)
-                    story.append(Paragraph("📸 Actual photo", styles['Normal']))
+                    story.append(Paragraph("📸 Actual photo" if lang == 'en' else "📸 Фото замечания", styles['Normal']))
                 except Exception as e:
                     story.append(Paragraph(f"⚠️ Photo error: {e}", styles['Normal']))
             story.append(Spacer(1, 6*mm))
             story.append(PageBreak())
     else:
-        story.append(Paragraph(get_text(lang, 'no_defects'), styles['Normal']))
+        story.append(Paragraph(TRANSLATIONS[lang]['no_defects'], styles['Normal']))
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -286,30 +303,18 @@ def get_embedding(image_path):
         emb = embedder(img_tensor).flatten().cpu().numpy()
     return emb
 
-def get_category_info(filename, lang):
+def get_category_info(filename):
     name = os.path.basename(filename)
     print(f"🔎 Determining category for: {name}")
     for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
         if name.startswith(keyword):
-            return {
-                "text": text.get(lang, text['en']),
-                "etalon_prefix": etalon_prefix,
-                "normative": normative.get(lang, normative['en'])
-            }
+            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
     parts = name.split('_')
     for keyword, text, etalon_prefix, normative in CATEGORY_DATA:
         kw_parts = keyword.split('_')
         if any(kp in parts for kp in kw_parts):
-            return {
-                "text": text.get(lang, text['en']),
-                "etalon_prefix": etalon_prefix,
-                "normative": normative.get(lang, normative['en'])
-            }
-    return {
-        "text": f"📌 Unknown defect (file: {name})",
-        "etalon_prefix": None,
-        "normative": None
-    }
+            return {"text": text, "etalon_prefix": etalon_prefix, "normative": normative}
+    return {"text": f"📌 Unknown defect (file: {name})", "etalon_prefix": None, "normative": None}
 
 def find_etalon(prefix):
     etalon_dir = "etalons"
@@ -320,23 +325,13 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== HANDLERS =====
-async def start(update, context):
-    user_id = update.effective_user.id
-    # Определяем язык по первому сообщению
-    text = update.message.text or ""
-    lang = detect_language(text) if text else 'en'
-    register_user(user_id, lang)
-    context.user_data['lang'] = lang
-    await update.message.reply_text(
-        get_text(lang, 'start'),
-        reply_markup=get_language_keyboard() if lang == 'ru' else None
-    )
-
+# ===== HANDLE PHOTO =====
 async def handle_photo(update, context):
     try:
         user_id = update.effective_user.id
-        lang = context.user_data.get('lang', get_user_lang(user_id))
+        register_user(user_id)
+        lang = get_user_language(user_id)
+        t = TRANSLATIONS[lang]
 
         load_index()
         load_model()
@@ -353,14 +348,13 @@ async def handle_photo(update, context):
         distances, indices = index.search(emb, 1)
 
         if len(indices[0]) == 0 or indices[0][0] == -1:
-            await update.message.reply_text(get_text(lang, 'no_photo_found'))
+            await update.message.reply_text(t['no_match'])
             return
 
         idx = indices[0][0]
         full_path = image_paths[idx]
-        info = get_category_info(full_path, lang)
+        info = get_category_info(full_path)
 
-        # Сохраняем фото в review
         base_dir = os.getcwd()
         category_folder = info.get("etalon_prefix", "unknown")
         review_dir = os.path.join(base_dir, "review", category_folder)
@@ -371,9 +365,9 @@ async def handle_photo(update, context):
         await file.download_to_drive(review_path)
         print(f"✅ Фото сохранено: {review_path}")
 
-        response = f"🔍 **{get_text(lang, 'defect_found')}**\n{info['text']}\n\n📸 {get_text(lang, 'photo_saved')}"
+        response = f"{t['defect_found']}\n{info['text']}\n\n{t['photo_saved']}\n{t['awaiting']}"
         if info.get("normative"):
-            response += f"\n📜 {get_text(lang, 'standard')}: {info['normative']}"
+            response += f"\n{t['standard']} {info['normative']}"
 
         etalon_path = find_etalon(info.get("etalon_prefix"))
         if etalon_path and os.path.exists(etalon_path):
@@ -392,41 +386,64 @@ async def handle_photo(update, context):
 
     except Exception as e:
         print(f"Error: {e}")
-        await update.message.reply_text(f"❌ {get_text(lang, 'error').format(str(e))}")
+        await update.message.reply_text(f"❌ Error: {e}")
 
+# ===== BUTTON CALLBACK =====
 async def button_callback(update, context):
     query = update.callback_query
-    await query.answer()
     user_id = update.effective_user.id
-    lang = context.user_data.get('lang', get_user_lang(user_id))
+    register_user(user_id)
+    lang = get_user_language(user_id)
+    t = TRANSLATIONS[lang]
 
-    if query.data.startswith("lang_"):
-        new_lang = query.data.split("_")[1]
-        update_user_lang(user_id, new_lang)
-        context.user_data['lang'] = new_lang
-        await query.edit_message_text(get_text(new_lang, 'language_selected'))
-        return
+    await query.answer()
 
     if query.data == "generate_report":
         report_data = context.user_data.get('report_data', [])
         if not report_data:
-            await query.edit_message_text(get_text(lang, 'no_defects'))
+            await query.edit_message_text(t['no_defects'])
             return
         pdf_buffer = generate_pdf_report(report_data, query.message.chat.id, lang)
         await query.message.reply_document(
             document=pdf_buffer,
             filename=f"report_{dt.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-            caption=get_text(lang, 'report_ready')
+            caption=t['report_ready']
         )
         context.user_data['report_data'] = []
 
+    elif query.data.startswith("lang_"):
+        new_lang = query.data.split("_")[1]
+        set_user_language(user_id, new_lang)
+        t_new = TRANSLATIONS[new_lang]
+        await query.edit_message_text(t_new['language_set'])
+
+# ===== COMMAND /start =====
+async def start_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+    lang = get_user_language(user_id)
+    t = TRANSLATIONS[lang]
+    welcome_text = t['welcome']
+    await update.message.reply_text(welcome_text, reply_markup=get_language_keyboard())
+
+# ===== COMMAND /language =====
+async def language_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+    lang = get_user_language(user_id)
+    t = TRANSLATIONS[lang]
+    await update.message.reply_text(t['choose_language'], reply_markup=get_language_keyboard())
+
+# ===== COMMAND /review =====
 async def review_command(update, context):
     user_id = update.effective_user.id
-    lang = context.user_data.get('lang', get_user_lang(user_id))
+    register_user(user_id)
+    lang = get_user_language(user_id)
+    t = TRANSLATIONS[lang]
 
     review_dir = os.path.join(os.getcwd(), "review")
     if not os.path.exists(review_dir):
-        await update.message.reply_text("📭 Папка review пуста или не существует.")
+        await update.message.reply_text(t['review_empty'])
         return
 
     photo_paths = []
@@ -436,11 +453,10 @@ async def review_command(update, context):
                 photo_paths.append(os.path.join(root, f))
 
     if not photo_paths:
-        await update.message.reply_text("📭 В папке review нет фото.")
+        await update.message.reply_text(t['review_empty'])
         return
 
-    await update.message.reply_text(f"📸 Найдено {len(photo_paths)} фото. Отправляю...")
-
+    await update.message.reply_text(t['review_photos_found'].format(count=len(photo_paths)))
     for path in photo_paths:
         try:
             with open(path, 'rb') as f:
@@ -448,29 +464,21 @@ async def review_command(update, context):
         except Exception as e:
             print(f"❌ Ошибка отправки {path}: {e}")
             await update.message.reply_text(f"❌ Не удалось отправить: {os.path.basename(path)}")
+    await update.message.reply_text(t['review_done'])
 
-    await update.message.reply_text("✅ Все фото отправлены.")
-
+# ===== COMMAND /stats (only for owner) =====
 async def stats_command(update, context):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
-        await update.message.reply_text("⛔ You are not authorized to view statistics.")
+        lang = get_user_language(user_id)
+        await update.message.reply_text(TRANSLATIONS[lang]['stats_unauthorized'])
         return
 
     total, today_count, week_count = get_stats()
-    msg = (
-        f"📊 Bot Statistics:\n"
-        f"👥 Total users: {total}\n"
-        f"📈 New today: {today_count}\n"
-        f"📅 New this week: {week_count}"
-    )
+    lang = get_user_language(user_id)
+    t = TRANSLATIONS[lang]
+    msg = t['stats'].format(total=total, today=today_count, week=week_count)
     await update.message.reply_text(msg)
-
-async def language_command(update, context):
-    await update.message.reply_text(
-        "🌍 Please choose your language / Выберите язык:",
-        reply_markup=get_language_keyboard()
-    )
 
 # ===== START =====
 if __name__ == "__main__":
@@ -480,11 +488,11 @@ if __name__ == "__main__":
     load_index()
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("language", language_command))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(CallbackQueryHandler(button_callback))
     print("🚀 Bot started. Waiting for photos...")
     app.run_polling()
