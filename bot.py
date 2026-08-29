@@ -81,7 +81,7 @@ def get_report_keyboard():
     keyboard = [[InlineKeyboardButton("📄 Generate Report", callback_data="generate_report")]]
     return InlineKeyboardMarkup(keyboard)
 
-# ===== PDF GENERATION =====
+# ===== PDF GENERATION (исправлена) =====
 def generate_pdf_report(report_data, chat_id):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -102,11 +102,12 @@ def generate_pdf_report(report_data, chat_id):
             story.append(Paragraph(f"<b>Defect #{i}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', 'Unknown')}", styles['Normal']))
             story.append(Paragraph(f"📜 Standard: {item.get('normative', '—')}", styles['Normal']))
-           story.append(Paragraph(
-    "🛠 Recommended action: Bring into compliance with "
-    "the requirements of applicable regulatory and technical documents (RTD).",
-    styles['Normal']
-))
+            # Исправленная универсальная рекомендация
+            story.append(Paragraph(
+                "🛠 Recommended action: Bring into compliance with "
+                "the requirements of applicable regulatory and technical documents (RTD).",
+                styles['Normal']
+            ))
             
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
@@ -125,7 +126,7 @@ def generate_pdf_report(report_data, chat_id):
     buffer.seek(0)
     return buffer
 
-# ===== AUTO-DOWNLOAD PHOTOS (ONLY PHOTO_DB) =====
+# ===== AUTO-DOWNLOAD PHOTOS =====
 def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db already exists, skipping download.")
@@ -147,6 +148,22 @@ def download_and_extract_photos():
                 if f.lower().endswith(('.jpg', '.jpeg', '.png')):
                     os.rename(f, os.path.join("photo_db", f))
     print(f"✅ photo_db ready, {len(os.listdir('photo_db'))} files.")
+
+# ===== AUTO-DOWNLOAD ETALONS =====
+def download_and_extract_etalons():
+    if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
+        print("📁 etalons already exists, skipping download.")
+        return
+    print("📥 Downloading etalons archive...")
+    response = requests.get(ETALONS_URL, stream=True)
+    with open("etalons.zip", "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print("📦 Extracting...")
+    with zipfile.ZipFile("etalons.zip", "r") as zip_ref:
+        zip_ref.extractall(".")
+    os.remove("etalons.zip")
+    print("✅ Etalons ready.")
 
 # ===== LOAD INDEX =====
 def load_index():
@@ -288,6 +305,7 @@ async def button_callback(update, context):
 # ===== START =====
 if __name__ == "__main__":
     download_and_extract_photos()
+    download_and_extract_etalons()
     load_index()
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
