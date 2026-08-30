@@ -21,8 +21,74 @@ OWNER_ID = 8743362338
 
 # ===== TRANSLATIONS =====
 T = {
-    "en": {"welcome":"Hello! 👋\nI'm a technical inspection bot...", "language_set":"✅ Language set to English.", "defect_found":"🔍 **Defect found:**", "standard":"📜 Standard:", "no_match":"❌ No match.", "report_ready":"📄 Your order is ready!", "no_defects":"📭 No defects.", "review_empty":"📭 Review folder is empty.", "review_photos_found":"📸 Found {count} photos.", "review_done":"✅ All photos sent.", "stats":"📊 Bot Statistics:\n👥 Total: {total}\n📈 Today: {today}\n📅 Week: {week}", "stats_unauthorized":"⛔ Not authorized.", "choose_language":"🌐 Choose language:", "report_action":"🛠 Recommended action: bring into compliance with RTD.", "defects_list":"🔍 Found defects:", "generate_order":"📄 Generate order", "classify_prompt":"📸 Classify this photo:", "classify_success":"✅ Photo added to {category}", "classify_skipped":"⏭️ Skipped", "classify_rejected":"❌ Rejected and deleted"},
-    "ru": {"welcome":"Привет! 👋\nЯ бот технической инспекции...", "language_set":"✅ Язык установлен на русский.", "defect_found":"🔍 **Найдено замечание:**", "standard":"📜 Норматив:", "no_match":"❌ Не найдено.", "report_ready":"📄 Ваше предписание готово!", "no_defects":"📭 Нет замечаний.", "review_empty":"📭 Папка review пуста.", "review_photos_found":"📸 Найдено {count} фото.", "review_done":"✅ Все фото отправлены.", "stats":"📊 Статистика:\n👥 Всего: {total}\n📈 Сегодня: {today}\n📅 Неделя: {week}", "stats_unauthorized":"⛔ Не авторизован.", "choose_language":"🌐 Выберите язык:", "report_action":"🛠 Привести в соответствие с НТД.", "defects_list":"🔍 Найдены замечания:", "generate_order":"📄 Сформировать предписание", "classify_prompt":"📸 Классифицируйте это фото:", "classify_success":"✅ Фото добавлено в {category}", "classify_skipped":"⏭️ Пропущено", "classify_rejected":"❌ Отклонено и удалено"}
+    "en": {
+        "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
+        "language_set": "✅ Language set to English. Send a photo of electrical installation.",
+        "defect_found": "🔍 **Defect found:**",
+        "standard": "📜 Standard:",
+        "no_match": "❌ Could not find a matching image in the database.",
+        "report_ready": "📄 Your order is ready!",
+        "no_defects": "📭 No defects recorded. Please send photos first.",
+        "review_empty": "📭 Review folder is empty or does not exist.",
+        "review_photos_found": "📸 Found {count} photos. Sending...",
+        "review_done": "✅ All photos sent.",
+        "stats": "📊 Bot Statistics:\n👥 Total users: {total}\n📈 New today: {today}\n📅 New this week: {week}",
+        "stats_unauthorized": "⛔ You are not authorized to view statistics.",
+        "choose_language": "🌐 Choose your language:",
+        "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD).",
+        "defects_list": "🔍 Found defects:",
+        "generate_order": "📄 Generate order",
+        "classify_prompt": "📸 Classify this photo:",
+        "classify_success": "✅ Photo added to {category}",
+        "classify_skipped": "⏭️ Skipped",
+        "classify_rejected": "❌ Rejected and deleted",
+        "order_title": "ORDER",
+        "issue_date": "Issue date:",
+        "defect": "Defect",
+        "standard_label": "Standard:",
+        "deadline": "Remediation deadline: _______________",
+        "issued_by": "ISSUED BY:",
+        "company": "Company: ___________________",
+        "position": "Position: _________________",
+        "full_name": "Full name: _______________________",
+        "signature": "Signature: ___________________",
+        "received_by": "RECEIVED BY:",
+        "violation_photo": "Violation photo"
+    },
+    "ru": {
+        "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
+        "language_set": "✅ Язык установлен на русский. Отправьте фото электроустановки.",
+        "defect_found": "🔍 **Найдено замечание:**",
+        "standard": "📜 Норматив:",
+        "no_match": "❌ Не удалось найти похожее изображение в базе.",
+        "report_ready": "📄 Ваше предписание готово!",
+        "no_defects": "📭 Нет замечаний для предписания. Сначала отправьте фотографии.",
+        "review_empty": "📭 Папка review пуста или не существует.",
+        "review_photos_found": "📸 Найдено {count} фото. Отправляю...",
+        "review_done": "✅ Все фото отправлены.",
+        "stats": "📊 Статистика бота:\n👥 Всего пользователей: {total}\n📈 Новых сегодня: {today}\n📅 За неделю: {week}",
+        "stats_unauthorized": "⛔ Вы не авторизованы для просмотра статистики.",
+        "choose_language": "🌐 Выберите язык:",
+        "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД).",
+        "defects_list": "🔍 Найдены замечания:",
+        "generate_order": "📄 Сформировать предписание",
+        "classify_prompt": "📸 Классифицируйте это фото:",
+        "classify_success": "✅ Фото добавлено в категорию {category}",
+        "classify_skipped": "⏭️ Пропущено",
+        "classify_rejected": "❌ Отклонено и удалено",
+        "order_title": "ПРЕДПИСАНИЕ",
+        "issue_date": "Дата выдачи:",
+        "defect": "Замечание",
+        "standard_label": "Норматив:",
+        "deadline": "Срок устранения: _______________",
+        "issued_by": "ВЫДАЛ ПРЕДПИСАНИЕ:",
+        "company": "Компания: ___________________",
+        "position": "Должность: _________________",
+        "full_name": "ФИО: _______________________",
+        "signature": "Подпись: ___________________",
+        "received_by": "ВЗЯЛ В РАБОТУ:",
+        "violation_photo": "Фото нарушения"
+    }
 }
 
 # ===== CATEGORIES =====
@@ -209,15 +275,6 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
     ])
 
-def get_classify_keyboard(lang):
-    kb = []
-    for cat in CATEGORIES:
-        label = cat["label_ru"] if lang=="ru" else cat["label_en"]
-        kb.append([InlineKeyboardButton(label, callback_data=f"classify_{cat['keyword']}")])
-    kb.append([InlineKeyboardButton("⏭️ Пропустить" if lang=="ru" else "⏭️ Skip", callback_data="classify_skip")])
-    kb.append([InlineKeyboardButton("❌ Отклонить" if lang=="ru" else "❌ Reject", callback_data="classify_reject")])
-    return InlineKeyboardMarkup(kb)
-
 # ===== PDF =====
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
@@ -226,38 +283,39 @@ def generate_pdf_report(report_data, lang):
     for s in styles.byName: styles[s].fontName = FONT
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1, fontName=FONT)
     story = []
-    story.append(Paragraph("ПРЕДПИСАНИЕ" if lang=="ru" else "ORDER", title_style))
-    story.append(Paragraph(f"Дата выдачи: {dt.datetime.now().strftime('%d.%m.%Y')}" if lang=="ru" else f"Issue date: {dt.datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
+    t = T[lang]
+    story.append(Paragraph(t['order_title'], title_style))
+    story.append(Paragraph(f"{t['issue_date']} {dt.datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
     story.append(Spacer(1, 6*mm))
     if report_data:
         for i, item in enumerate(report_data, 1):
-            story.append(Paragraph(f"<b>{'Замечание' if lang=='ru' else 'Defect'} #{i}</b>", styles['Heading2']))
-            story.append(Paragraph(f"📌 {item.get('text','')}", styles['Normal']))
-            story.append(Paragraph(f"{'Норматив:' if lang=='ru' else 'Standard:'} {item.get('normative','—')}", styles['Normal']))
-            story.append(Paragraph(T[lang]['report_action'], styles['Normal']))
+            story.append(Paragraph(f"<b>{t['defect']} #{i}</b>", styles['Heading2']))
+            story.append(Paragraph(f"📌 {item.get('text', '')}", styles['Normal']))
+            story.append(Paragraph(f"{t['standard_label']} {item.get('normative', '—')}", styles['Normal']))
+            story.append(Paragraph(t['report_action'], styles['Normal']))
             if item.get('photo_path') and os.path.exists(item['photo_path']):
                 try:
                     img = RLImage(item['photo_path'], width=120*mm, height=80*mm)
                     story.append(img)
-                    story.append(Paragraph("📸 Фото нарушения" if lang=="ru" else "📸 Violation photo", styles['Normal']))
+                    story.append(Paragraph(t['violation_photo'], styles['Normal']))
                 except: pass
             story.append(Spacer(1, 4*mm))
         story.append(Spacer(1, 6*mm))
-        story.append(Paragraph("Срок устранения: _______________", styles['Normal']))
+        story.append(Paragraph(t['deadline'], styles['Normal']))
         story.append(Spacer(1, 4*mm))
-        story.append(Paragraph("ВЫДАЛ ПРЕДПИСАНИЕ:" if lang=="ru" else "ISSUED BY:", styles['Normal']))
-        story.append(Paragraph("Компания: ___________________", styles['Normal']))
-        story.append(Paragraph("Должность: _________________", styles['Normal']))
-        story.append(Paragraph("ФИО: _______________________", styles['Normal']))
-        story.append(Paragraph("Подпись: ___________________", styles['Normal']))
+        story.append(Paragraph(t['issued_by'], styles['Normal']))
+        story.append(Paragraph(t['company'], styles['Normal']))
+        story.append(Paragraph(t['position'], styles['Normal']))
+        story.append(Paragraph(t['full_name'], styles['Normal']))
+        story.append(Paragraph(t['signature'], styles['Normal']))
         story.append(Spacer(1, 4*mm))
-        story.append(Paragraph("ВЗЯЛ В РАБОТУ:" if lang=="ru" else "RECEIVED BY:", styles['Normal']))
-        story.append(Paragraph("Компания: ___________________", styles['Normal']))
-        story.append(Paragraph("Должность: _________________", styles['Normal']))
-        story.append(Paragraph("ФИО: _______________________", styles['Normal']))
-        story.append(Paragraph("Подпись: ___________________", styles['Normal']))
+        story.append(Paragraph(t['received_by'], styles['Normal']))
+        story.append(Paragraph(t['company'], styles['Normal']))
+        story.append(Paragraph(t['position'], styles['Normal']))
+        story.append(Paragraph(t['full_name'], styles['Normal']))
+        story.append(Paragraph(t['signature'], styles['Normal']))
     else:
-        story.append(Paragraph(T[lang]['no_defects'], styles['Normal']))
+        story.append(Paragraph(t['no_defects'], styles['Normal']))
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -283,7 +341,6 @@ async def handle_photo(update, context):
         await update.message.reply_text(t['no_match'])
         return
 
-    # Save to review
     review_dir = "review"
     os.makedirs(review_dir, exist_ok=True)
     timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -291,7 +348,6 @@ async def handle_photo(update, context):
     await file.download_to_drive(review_path)
     print(f"Saved review: {review_path}")
 
-    # Collect unique defects
     unique = []
     seen = set()
     for idx in indices[0]:
@@ -310,7 +366,6 @@ async def handle_photo(update, context):
         response += f"{i}. {d['text']}\n"
         if d.get('normative'): response += f"   {t['standard']} {d['normative']}\n"
 
-    # Store for report
     if 'report_data' not in context.user_data: context.user_data['report_data'] = []
     for d in unique:
         context.user_data['report_data'].append({
@@ -335,7 +390,7 @@ async def button_callback(update, context):
     t = T[lang]
     data = query.data
 
-    print(f"Button clicked: {data}")  # <-- отладка в логах
+    print(f"Button clicked: {data}")
 
     if data == "generate_report":
         report_data = context.user_data.get('report_data', [])
@@ -389,7 +444,7 @@ async def button_callback(update, context):
         if context.user_data['review_photos']:
             next_photo = context.user_data['review_photos'][0]
             with open(next_photo, 'rb') as f:
-                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_classify_keyboard(lang))
+                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_language_keyboard())
         else:
             await query.message.reply_text(t['review_done'])
         return
@@ -411,6 +466,7 @@ async def review_command(update, context):
     register_user(user_id)
     lang = get_lang(user_id)
     t = T[lang]
+
     review_dir = "review"
     if not os.path.exists(review_dir):
         os.makedirs(review_dir, exist_ok=True)
@@ -420,16 +476,22 @@ async def review_command(update, context):
     photos = []
     for root, _, files in os.walk(review_dir):
         for f in files:
-            if f.lower().endswith(('.jpg','.jpeg','.png')):
+            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
                 photos.append(os.path.join(root, f))
+
     if not photos:
         await update.message.reply_text(t['review_empty'])
         return
 
-    context.user_data['review_photos'] = photos
-    first = photos[0]
-    with open(first, 'rb') as f:
-        await update.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_classify_keyboard(lang))
+    await update.message.reply_text(t['review_photos_found'].format(count=len(photos)))
+    for path in photos:
+        try:
+            with open(path, 'rb') as f:
+                await update.message.reply_photo(photo=f)
+        except Exception as e:
+            print(f"❌ Error sending {path}: {e}")
+            await update.message.reply_text(f"❌ Could not send: {os.path.basename(path)}")
+    await update.message.reply_text(t['review_done'])
 
 async def stats_command(update, context):
     user_id = update.effective_user.id
