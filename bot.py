@@ -400,7 +400,6 @@ async def handle_photo(update, context):
         response += f"{i}. {d['text']}\n"
         if d.get('normative'): response += f"   {t['standard']} {d['normative']}\n"
 
-    # Сохраняем данные в базу
     report_data = [{
         'text': d['text'],
         'normative': d.get('normative'),
@@ -437,14 +436,15 @@ async def button_callback(update, context):
             filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="ru" else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
             caption=t['report_ready']
         )
-        delete_session(user_id)  # очищаем сессию после формирования
+        delete_session(user_id)
         await query.delete_message()
         return
 
     if data.startswith("lang_"):
         new_lang = data.split("_")[1]
         set_lang(user_id, new_lang)
-        await query.edit_message_text(T[new_lang]['language_set'])
+        # После выбора языка показываем приветствие без кнопок
+        await query.edit_message_text(T[new_lang]['welcome'])
         return
 
     if data.startswith("classify_"):
@@ -487,13 +487,11 @@ async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_lang(user_id)
-    await update.message.reply_text(T[lang]['welcome'], reply_markup=get_language_keyboard())
-
-async def language_command(update, context):
-    user_id = update.effective_user.id
-    register_user(user_id)
-    lang = get_lang(user_id)
-    await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
+    # Всегда показываем выбор языка при /start
+    await update.message.reply_text(
+        T[lang]['choose_language'],
+        reply_markup=get_language_keyboard()
+    )
 
 async def review_command(update, context):
     user_id = update.effective_user.id
@@ -546,7 +544,6 @@ if __name__ == "__main__":
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("language", language_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
