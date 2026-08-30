@@ -1,4 +1,4 @@
-import os, pickle, zipfile, gdown, requests, numpy as np, faiss, sqlite3, shutil, subprocess, io, datetime as dt
+import os, pickle, zipfile, gdown, requests, numpy as np, faiss, sqlite3, shutil, subprocess, io, datetime as dt, json
 from datetime import timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
@@ -117,7 +117,18 @@ CATEGORIES = [
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, first_seen TEXT, last_seen TEXT, language TEXT DEFAULT "en")')
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        first_seen TEXT,
+        last_seen TEXT,
+        language TEXT DEFAULT "en"
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS sessions (
+        user_id INTEGER,
+        report_data TEXT,
+        created_at TEXT,
+        PRIMARY KEY (user_id)
+    )''')
     conn.commit(); conn.close()
 
 def register_user(user_id):
@@ -151,6 +162,29 @@ def get_stats():
     week_count = c.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) >= ?", (week_ago,)).fetchone()[0]
     conn.close()
     return total, today_count, week_count
+
+def save_session(user_id, report_data):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    data_json = json.dumps(report_data)
+    c.execute("INSERT OR REPLACE INTO sessions (user_id, report_data, created_at) VALUES (?, ?, ?)",
+              (user_id, data_json, dt.datetime.now().isoformat()))
+    conn.commit(); conn.close()
+
+def load_session(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT report_data FROM sessions WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    if r:
+        return json.loads(r[0])
+    return None
+
+def delete_session(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    conn.commit(); conn.close()
 
 # ===== FONT =====
 try:
@@ -366,13 +400,13 @@ async def handle_photo(update, context):
         response += f"{i}. {d['text']}\n"
         if d.get('normative'): response += f"   {t['standard']} {d['normative']}\n"
 
-    if 'report_data' not in context.user_data: context.user_data['report_data'] = []
-    for d in unique:
-        context.user_data['report_data'].append({
-            'text': d['text'],
-            'normative': d.get('normative'),
-            'photo_path': review_path
-        })
+    # Сохраняем данные в базу
+    report_data = [{
+        'text': d['text'],
+        'normative': d.get('normative'),
+        'photo_path': review_path
+    } for d in unique]
+    save_session(user_id, report_data)
 
     etalon_path = find_etalon(unique[0].get("etalon_prefix"))
     if etalon_path and os.path.exists(etalon_path):
@@ -393,7 +427,7 @@ async def button_callback(update, context):
     print(f"Button clicked: {data}")
 
     if data == "generate_report":
-        report_data = context.user_data.get('report_data', [])
+        report_data = load_session(user_id)
         if not report_data:
             await query.edit_message_text(t['no_defects'])
             return
@@ -403,7 +437,7 @@ async def button_callback(update, context):
             filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="ru" else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
             caption=t['report_ready']
         )
-        context.user_data['report_data'] = []
+        delete_session(user_id)  # очищаем сессию после формирования
         await query.delete_message()
         return
 
