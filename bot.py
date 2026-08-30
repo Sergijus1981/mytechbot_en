@@ -541,9 +541,11 @@ if __name__ == "__main__":
     init_db()
     download_and_extract_photos()
     download_and_extract_etalons()
+    rebuild_index()   # <-- добавить эту строку
     load_index()
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
+    ...
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
