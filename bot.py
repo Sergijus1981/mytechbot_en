@@ -19,16 +19,15 @@ PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/p
 ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
 INDEX_PATH, PATHS_PATH, MODEL_PATH = "faiss_index.bin", "image_paths.pkl", "best.pt"
 OWNER_ID = 8743362338
-DISTANCE_THRESHOLD = 30.0
 
-# ===== TRANSLATIONS =====
+# ===== TRANSLATIONS (EN, RU, ES) =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
         "language_set": "✅ Language set to English. Send a photo of electrical installation.",
         "defect_found": "🔍 **Defect found:**",
         "standard": "📜 Standard:",
-        "no_match": "❌ No sufficiently similar examples found. Try another photo or send it for review.",
+        "no_match": "❌ No similar examples found. Try another photo or send it for review.",
         "report_ready": "📄 Your order is ready!",
         "no_defects": "📭 No defects recorded. Please send photos first.",
         "review_empty": "📭 Review folder is empty or does not exist.",
@@ -62,7 +61,7 @@ T = {
         "language_set": "✅ Язык установлен на русский. Отправьте фото электроустановки.",
         "defect_found": "🔍 **Найдено замечание:**",
         "standard": "📜 Норматив:",
-        "no_match": "❌ Не найдено достаточно похожих примеров. Попробуйте другое фото или отправьте на доработку.",
+        "no_match": "❌ Похожих примеров не найдено. Попробуйте другое фото или отправьте на доработку.",
         "report_ready": "📄 Ваше предписание готово!",
         "no_defects": "📭 Нет замечаний для предписания. Сначала отправьте фотографии.",
         "review_empty": "📭 Папка review пуста или не существует.",
@@ -96,7 +95,7 @@ T = {
         "language_set": "✅ Idioma configurado al español. Envía una foto de una instalación eléctrica.",
         "defect_found": "🔍 **Defecto encontrado:**",
         "standard": "📜 Normativa:",
-        "no_match": "❌ No se encontraron ejemplos suficientemente similares. Prueba con otra foto o envíala para revisión.",
+        "no_match": "❌ No se encontraron ejemplos similares. Prueba con otra foto o envíala para revisión.",
         "report_ready": "📄 ¡Su orden está lista!",
         "no_defects": "📭 No hay defectos registrados. Envía fotos primero.",
         "review_empty": "📭 La carpeta de revisión está vacía o no existe.",
@@ -183,7 +182,7 @@ def get_lang(user_id):
     conn.close()
     if r and r[0]:
         return r[0]
-    return "en"   # всегда возвращаем строку
+    return "en"
 
 def set_lang(user_id, lang):
     conn = sqlite3.connect("users.db")
@@ -271,7 +270,6 @@ def rebuild_index():
     subprocess.run(["python", "index_builder.py"], check=True)
     load_index()
 
-# ===== INDEX, MODEL =====
 def load_index():
     global index, image_paths
     if index is None:
@@ -338,7 +336,6 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== KEYBOARDS =====
 def get_report_keyboard(lang):
     return InlineKeyboardMarkup([[InlineKeyboardButton(T[lang]['generate_order'], callback_data="generate_report")]])
 
@@ -349,7 +346,6 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")]
     ])
 
-# ===== PDF =====
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -395,7 +391,6 @@ def generate_pdf_report(report_data, lang):
     buffer.seek(0)
     return buffer
 
-# ===== HANDLERS =====
 async def handle_photo(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
@@ -416,15 +411,6 @@ async def handle_photo(update, context):
         await update.message.reply_text(t['no_match'])
         return
 
-    valid_indices = []
-    for i, idx in enumerate(indices[0]):
-        if distances[0][i] < DISTANCE_THRESHOLD:
-            valid_indices.append(idx)
-
-    if not valid_indices:
-        await update.message.reply_text(t['no_match'])
-        return
-
     review_dir = "review"
     os.makedirs(review_dir, exist_ok=True)
     timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -434,7 +420,7 @@ async def handle_photo(update, context):
 
     unique = []
     seen = set()
-    for idx in valid_indices:
+    for idx in indices[0]:
         info = get_category_info(image_paths[idx], lang)
         key = info.get("etalon_prefix")
         if key and key not in seen:
@@ -533,7 +519,7 @@ async def button_callback(update, context):
 async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
-    lang = get_lang(user_id)   # теперь всегда вернёт строку
+    lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
 
 async def review_command(update, context):
@@ -574,7 +560,6 @@ async def stats_command(update, context):
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
-# ===== START =====
 if __name__ == "__main__":
     init_db()
     download_and_extract_photos()
