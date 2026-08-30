@@ -19,9 +19,9 @@ PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/p
 ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
 INDEX_PATH, PATHS_PATH, MODEL_PATH = "faiss_index.bin", "image_paths.pkl", "best.pt"
 OWNER_ID = 8743362338
-DISTANCE_THRESHOLD = 30.0   # порог уверенности
+DISTANCE_THRESHOLD = 30.0
 
-# ===== TRANSLATIONS (EN, RU, ES) =====
+# ===== TRANSLATIONS =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -127,7 +127,7 @@ T = {
     }
 }
 
-# ===== CATEGORIES (same for all languages, translations inside) =====
+# ===== CATEGORIES =====
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos."},
@@ -149,15 +149,81 @@ CATEGORIES = [
      "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22"}}
 ]
 
-# ===== DB (unchanged) =====
-def init_db(): ...
-def register_user(user_id): ...
-def get_lang(user_id): ...
-def set_lang(user_id, lang): ...
-def get_stats(): ...
-def save_session(user_id, report_data): ...
-def load_session(user_id): ...
-def delete_session(user_id): ...
+# ===== DB =====
+def init_db():
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        first_seen TEXT,
+        last_seen TEXT,
+        language TEXT DEFAULT "en"
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS sessions (
+        user_id INTEGER,
+        report_data TEXT,
+        created_at TEXT,
+        PRIMARY KEY (user_id)
+    )''')
+    conn.commit(); conn.close()
+
+def register_user(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    now = dt.datetime.now().isoformat()
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, language) VALUES (?, ?, ?, 'en')",
+              (user_id, now, now))
+    c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
+    conn.commit(); conn.close()
+
+def get_lang(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    if r and r[0]:
+        return r[0]
+    return "en"   # всегда возвращаем строку
+
+def set_lang(user_id, lang):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("UPDATE users SET language = ? WHERE user_id = ?", (lang, user_id))
+    conn.commit(); conn.close()
+
+def get_stats():
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    today = dt.datetime.now().date().isoformat()
+    today_count = c.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) = ?", (today,)).fetchone()[0]
+    week_ago = (dt.datetime.now() - timedelta(days=7)).date().isoformat()
+    week_count = c.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) >= ?", (week_ago,)).fetchone()[0]
+    conn.close()
+    return total, today_count, week_count
+
+def save_session(user_id, report_data):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    data_json = json.dumps(report_data)
+    c.execute("INSERT OR REPLACE INTO sessions (user_id, report_data, created_at) VALUES (?, ?, ?)",
+              (user_id, data_json, dt.datetime.now().isoformat()))
+    conn.commit(); conn.close()
+
+def load_session(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT report_data FROM sessions WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    if r:
+        return json.loads(r[0])
+    return None
+
+def delete_session(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    conn.commit(); conn.close()
 
 # ===== FONT =====
 try:
@@ -173,15 +239,72 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== DOWNLOADS (unchanged) =====
-def download_and_extract_photos(): ...
-def download_and_extract_etalons(): ...
-def rebuild_index(): ...
+# ===== DOWNLOADS =====
+def download_and_extract_photos():
+    if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
+        print("photo_db exists")
+        return
+    print("Downloading photo_db...")
+    gdown.download(PHOTO_DB_URL, "photo_db.zip", quiet=False)
+    with zipfile.ZipFile("photo_db.zip", "r") as z: z.extractall(".")
+    os.remove("photo_db.zip")
+    if not os.path.exists("photo_db"):
+        os.mkdir("photo_db")
+        for f in os.listdir("."):
+            if f.lower().endswith(('.jpg','.jpeg','.png')): os.rename(f, os.path.join("photo_db", f))
+    print(f"photo_db ready, {len(os.listdir('photo_db'))} files")
 
-# ===== INDEX, MODEL (unchanged) =====
-def load_index(): ...
-def load_model(): ...
-def get_embedding(image_path): ...
+def download_and_extract_etalons():
+    if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
+        print("etalons exists")
+        return
+    print("Downloading etalons...")
+    r = requests.get(ETALONS_URL, stream=True)
+    with open("etalons.zip", "wb") as f:
+        for chunk in r.iter_content(8192): f.write(chunk)
+    with zipfile.ZipFile("etalons.zip", "r") as z: z.extractall(".")
+    os.remove("etalons.zip")
+    print("etalons ready")
+
+def rebuild_index():
+    print("Rebuilding index...")
+    subprocess.run(["python", "index_builder.py"], check=True)
+    load_index()
+
+# ===== INDEX, MODEL =====
+def load_index():
+    global index, image_paths
+    if index is None:
+        index = faiss.read_index(INDEX_PATH)
+        with open(PATHS_PATH, "rb") as f:
+            raw = pickle.load(f)
+        image_paths = [os.path.join("photo_db", os.path.basename(p)) for p in raw]
+        print(f"Index loaded, {len(image_paths)} images")
+
+def load_model():
+    global embedder, transform
+    if embedder is None:
+        try:
+            model = YOLO(MODEL_PATH)
+            torch_model = model.model.model
+            embedder = torch.nn.Sequential(*list(torch_model.children())[:-1]).eval()
+            transform = transforms.Compose([
+                transforms.Resize((224,224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+            ])
+            print("Model loaded")
+        except Exception as e:
+            print(f"Model load failed: {e}")
+            embedder = None
+
+def get_embedding(image_path):
+    if embedder is None:
+        return np.random.rand(128).astype('float32')
+    img = Image.open(image_path).convert('RGB')
+    img_tensor = transform(img).unsqueeze(0)
+    with torch.no_grad():
+        return embedder(img_tensor).flatten().cpu().numpy()
 
 def get_category_info(filename, lang):
     name = os.path.basename(filename)
@@ -226,7 +349,7 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")]
     ])
 
-# ===== PDF GENERATION (unchanged) =====
+# ===== PDF =====
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -239,7 +362,6 @@ def generate_pdf_report(report_data, lang):
     story.append(Paragraph(f"{t['issue_date']} {dt.datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
     story.append(Spacer(1, 6*mm))
     if report_data:
-        # берём первое фото (все замечания с одним фото)
         photo_path = report_data[0].get('photo_path') if report_data else None
         for i, item in enumerate(report_data, 1):
             story.append(Paragraph(f"<b>{t['defect']} #{i}</b>", styles['Heading2']))
@@ -247,7 +369,6 @@ def generate_pdf_report(report_data, lang):
             story.append(Paragraph(f"{t['standard_label']} {item.get('normative', '—')}", styles['Normal']))
             story.append(Paragraph(t['report_action'], styles['Normal']))
             story.append(Spacer(1, 4*mm))
-        # вставляем одно фото (первое)
         if photo_path and os.path.exists(photo_path):
             try:
                 img = RLImage(photo_path, width=120*mm, height=80*mm)
@@ -295,7 +416,6 @@ async def handle_photo(update, context):
         await update.message.reply_text(t['no_match'])
         return
 
-    # Фильтруем по порогу уверенности
     valid_indices = []
     for i, idx in enumerate(indices[0]):
         if distances[0][i] < DISTANCE_THRESHOLD:
@@ -305,7 +425,6 @@ async def handle_photo(update, context):
         await update.message.reply_text(t['no_match'])
         return
 
-    # Сохраняем фото в review (одно на все замечания)
     review_dir = "review"
     os.makedirs(review_dir, exist_ok=True)
     timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -313,7 +432,6 @@ async def handle_photo(update, context):
     await file.download_to_drive(review_path)
     print(f"Saved review: {review_path}")
 
-    # Собираем уникальные замечания (до 3)
     unique = []
     seen = set()
     for idx in valid_indices:
@@ -335,9 +453,8 @@ async def handle_photo(update, context):
     report_data = [{
         'text': d['text'],
         'normative': d.get('normative'),
-        'photo_path': review_path  # одно фото для всех замечаний
+        'photo_path': review_path
     } for d in unique]
-    # сохраняем в БД и в context.user_data
     save_session(user_id, report_data)
     context.user_data['report_data'] = report_data
 
@@ -379,7 +496,6 @@ async def button_callback(update, context):
         await query.edit_message_text(T[new_lang]['welcome'])
         return
 
-    # классификация (опционально)
     if data.startswith("classify_"):
         action = data.split("_", 1)[1]
         if 'review_photos' not in context.user_data or not context.user_data['review_photos']:
@@ -414,15 +530,49 @@ async def button_callback(update, context):
             await query.message.reply_text(t['review_done'])
         return
 
-# ===== COMMANDS =====
 async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
-    lang = get_lang(user_id)
+    lang = get_lang(user_id)   # теперь всегда вернёт строку
     await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
 
-async def review_command(update, context): ...
-async def stats_command(update, context): ...
+async def review_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+    lang = get_lang(user_id)
+    t = T[lang]
+    review_dir = "review"
+    if not os.path.exists(review_dir):
+        os.makedirs(review_dir, exist_ok=True)
+        await update.message.reply_text(t['review_empty'])
+        return
+    photos = []
+    for root, _, files in os.walk(review_dir):
+        for f in files:
+            if f.lower().endswith(('.jpg','.jpeg','.png')):
+                photos.append(os.path.join(root, f))
+    if not photos:
+        await update.message.reply_text(t['review_empty'])
+        return
+    await update.message.reply_text(t['review_photos_found'].format(count=len(photos)))
+    for path in photos:
+        try:
+            with open(path, 'rb') as f:
+                await update.message.reply_photo(photo=f)
+        except Exception as e:
+            print(f"❌ Error sending {path}: {e}")
+            await update.message.reply_text(f"❌ Could not send: {os.path.basename(path)}")
+    await update.message.reply_text(t['review_done'])
+
+async def stats_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        lang = get_lang(user_id)
+        await update.message.reply_text(T[lang]['stats_unauthorized'])
+        return
+    total, today, week = get_stats()
+    lang = get_lang(user_id)
+    await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
 # ===== START =====
 if __name__ == "__main__":
