@@ -16,9 +16,10 @@ from reportlab.lib.fonts import addMapping
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
 ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
-INDEX_PATH, PATHS_PATH, MODEL_PATH = "faiss_index.bin", "image_paths.pkl", "best.pt"
+INDEX_PATH = "faiss_index.bin"
+PATHS_PATH = "image_paths.pkl"
+MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
-
 # ===== TRANSLATIONS =====
 T = {
     "en": {
