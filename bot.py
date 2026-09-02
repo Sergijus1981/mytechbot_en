@@ -29,9 +29,9 @@ from reportlab.lib.fonts import addMapping
 # ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 
-# ===== ВСТАВЬ СВОИ FILE_ID =====
-PHOTO_DB_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_PHOTO_DB_ZIP"   # ЗАМЕНИ
-ETALONS_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_ETALONS_ZIP"     # ЗАМЕНИ
+# ===== ВСТАВЬ СВОИ FILE_ID (получи их, отправив архивы боту) =====
+PHOTO_DB_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_PHOTO_DB_ZIP"
+ETALONS_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_ETALONS_ZIP"
 
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
@@ -313,7 +313,6 @@ def rebuild_index():
     subprocess.run(["python", "index_builder.py"], check=True)
     load_index()
 
-# ===== ЗАГРУЗКА ИНДЕКСА И МОДЕЛИ =====
 def load_index():
     global index, image_paths
     if index is None:
@@ -621,11 +620,15 @@ async def main():
     init_db()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
 
-    # Асинхронная загрузка архивов
+    # Скачиваем архивы из Telegram
     await download_and_extract_photos(app)
     await download_and_extract_etalons(app)
 
-    # Перестраиваем индекс (если не удалось загрузить фото, это упадёт)
+    # Если папки не появились — выходим
+    if not os.path.exists("photo_db"):
+        print("❌ Не удалось загрузить фото, бот не запустится.")
+        return
+
     rebuild_index()
     load_index()
     load_model()
