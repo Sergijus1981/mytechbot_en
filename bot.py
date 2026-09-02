@@ -11,6 +11,7 @@ import subprocess
 import io
 import datetime as dt
 import json
+import asyncio
 from datetime import timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
@@ -28,8 +29,7 @@ from reportlab.lib.fonts import addMapping
 # ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 
-# ===== ВСТАВЬ СЮДА СВОИ FILE_ID =====
-# Как получить: отправь архив боту, он ответит file_id
+# ===== ВСТАВЬ СВОИ FILE_ID =====
 PHOTO_DB_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_PHOTO_DB_ZIP"   # ЗАМЕНИ
 ETALONS_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_ETALONS_ZIP"     # ЗАМЕНИ
 
@@ -144,7 +144,7 @@ T = {
     }
 }
 
-# ===== КАТЕГОРИИ (МУЛЬТИЯЗЫЧНЫЕ) =====
+# ===== КАТЕГОРИИ =====
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos."},
@@ -259,24 +259,23 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== СКАЧИВАНИЕ ПО FILE_ID (ВМЕСТО DROPBOX) =====
-def download_file_by_id(app, file_id, destination):
-    """Скачивает файл из Telegram по file_id"""
+# ===== АСИНХРОННЫЕ ФУНКЦИИ ДЛЯ СКАЧИВАНИЯ =====
+async def download_file_by_id(app, file_id, destination):
     try:
-        file_info = app.bot.get_file(file_id)
-        file_info.download(destination)
+        file_info = await app.bot.get_file(file_id)
+        await file_info.download_to_drive(destination)
         print(f"✅ Файл сохранён: {destination}")
         return True
     except Exception as e:
         print(f"❌ Ошибка скачивания: {e}")
         return False
 
-def download_and_extract_photos(app):
+async def download_and_extract_photos(app):
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db уже существует, пропускаю загрузку.")
         return
     print("📥 Скачиваю photo_db.zip из Telegram...")
-    if not download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
+    if not await download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
         print("❌ Не удалось скачать photo_db.zip")
         return
     print("📦 Распаковываю...")
@@ -290,12 +289,12 @@ def download_and_extract_photos(app):
                 break
     print(f"✅ photo_db готова, файлов: {len(os.listdir('photo_db'))}")
 
-def download_and_extract_etalons(app):
+async def download_and_extract_etalons(app):
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons уже существует, пропускаю загрузку.")
         return
     print("📥 Скачиваю etalons.zip из Telegram...")
-    if not download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
+    if not await download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
         print("❌ Не удалось скачать etalons.zip")
         return
     print("📦 Распаковываю...")
@@ -314,7 +313,7 @@ def rebuild_index():
     subprocess.run(["python", "index_builder.py"], check=True)
     load_index()
 
-# ===== ЗАГРУЗКА ИНДЕКСА =====
+# ===== ЗАГРУЗКА ИНДЕКСА И МОДЕЛИ =====
 def load_index():
     global index, image_paths
     if index is None:
@@ -324,7 +323,6 @@ def load_index():
         image_paths = [os.path.join("photo_db", os.path.basename(p)) for p in raw]
         print(f"Индекс загружен, {len(image_paths)} изображений.")
 
-# ===== ЗАГРУЗКА МОДЕЛИ =====
 def load_model():
     global embedder, transform
     if embedder is None:
@@ -619,15 +617,15 @@ async def stats_command(update, context):
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
 # ===== ЗАПУСК =====
-if __name__ == "__main__":
+async def main():
     init_db()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
 
-    # Скачиваем архивы из Telegram
-    download_and_extract_photos(app)
-    download_and_extract_etalons(app)
+    # Асинхронная загрузка архивов
+    await download_and_extract_photos(app)
+    await download_and_extract_etalons(app)
 
-    # Перестраиваем индекс, если нужно (убедимся, что index_builder.py использует best.pt)
+    # Перестраиваем индекс (если не удалось загрузить фото, это упадёт)
     rebuild_index()
     load_index()
     load_model()
@@ -638,4 +636,7 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
     print("🚀 Bot started.")
-    app.run_polling()
+    await app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
