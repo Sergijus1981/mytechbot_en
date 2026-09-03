@@ -25,19 +25,15 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
-# ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
-
-# ===== ТВОИ FILE_ID (ПОЛУЧЕНЫ ОТ БОТА) =====
-PHOTO_DB_FILE_ID = "BQACAgIAAxkBAAIEqWqYtskQE-eOao99JySpVZeqB0zvAAK0pgACk1DISCeMPGYx6X1HPQQ"
-ETALONS_FILE_ID = "BQACAgIAAxkBAAIEqmqYtsmDVxgzoD-rRJ6vEjO8uCrMAAK1pgACk1DISEf3H9KP04xrPQQ"
-
+PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
+ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
-# ===== ПЕРЕВОДЫ (ТОЛЬКО КЛЮЧЕВЫЕ) =====
+# ===== ПЕРЕВОДЫ (сокращены для компактности) =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -258,26 +254,13 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== АСИНХРОННЫЕ ФУНКЦИИ СКАЧИВАНИЯ ИЗ TELEGRAM =====
-async def download_file_by_id(app, file_id, destination):
-    try:
-        file_info = await app.bot.get_file(file_id)
-        await file_info.download_to_drive(destination)
-        print(f"✅ Файл сохранён: {destination}")
-        return True
-    except Exception as e:
-        print(f"❌ Ошибка скачивания: {e}")
-        return False
-
-async def download_and_extract_photos(app):
+# ===== СКАЧИВАНИЕ С DROPBOX =====
+def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db уже существует, пропускаю загрузку.")
         return
-    print("📥 Скачиваю photo_db.zip из Telegram...")
-    if not await download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
-        print("❌ Не удалось скачать photo_db.zip")
-        return
-    print("📦 Распаковываю...")
+    print("📥 Скачиваю photo_db.zip через Dropbox...")
+    gdown.download(PHOTO_DB_URL, "photo_db.zip", quiet=False)
     with zipfile.ZipFile("photo_db.zip", "r") as zf:
         zf.extractall(".")
     os.remove("photo_db.zip")
@@ -288,15 +271,15 @@ async def download_and_extract_photos(app):
                 break
     print(f"✅ photo_db готова, файлов: {len(os.listdir('photo_db'))}")
 
-async def download_and_extract_etalons(app):
+def download_and_extract_etalons():
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons уже существует, пропускаю загрузку.")
         return
-    print("📥 Скачиваю etalons.zip из Telegram...")
-    if not await download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
-        print("❌ Не удалось скачать etalons.zip")
-        return
-    print("📦 Распаковываю...")
+    print("📥 Скачиваю etalons.zip через Dropbox...")
+    response = requests.get(ETALONS_URL, stream=True)
+    with open("etalons.zip", "wb") as f:
+        for chunk in response.iter_content(8192):
+            f.write(chunk)
     with zipfile.ZipFile("etalons.zip", "r") as zf:
         zf.extractall(".")
     os.remove("etalons.zip")
@@ -615,31 +598,18 @@ async def stats_command(update, context):
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
 # ===== ЗАПУСК =====
-async def main():
+if __name__ == "__main__":
     init_db()
-    app = Application.builder().token(TOKEN).read_timeout(60).build()
-
-    # Скачиваем архивы из Telegram
-    await download_and_extract_photos(app)
-    await download_and_extract_etalons(app)
-
-    # Если папки не появились — выходим
-    if not os.path.exists("photo_db"):
-        print("❌ Не удалось загрузить фото, бот не запустится.")
-        return
-
+    download_and_extract_photos()
+    download_and_extract_etalons()
     rebuild_index()
     load_index()
     load_model()
-
+    app = Application.builder().token(TOKEN).read_timeout(60).build()
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (Telegram storage).")
-    await app.run_polling()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    print("🚀 Bot started (Dropbox).")
+    app.run_polling()
