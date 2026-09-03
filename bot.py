@@ -25,15 +25,19 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
+# ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
+
+# ===== DROPBOX ССЫЛКИ =====
 PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
 ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
+
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
-# ===== ПЕРЕВОДЫ (сокращены для компактности) =====
+# ===== ПЕРЕВОДЫ (СОКРАЩЕНЫ ДЛЯ МЕСТА, НО ПОЛНЫЕ) =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -254,7 +258,7 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== СКАЧИВАНИЕ С DROPBOX =====
+# ===== СКАЧИВАНИЕ ИЗ DROPBOX (СИНХРОННОЕ) =====
 def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db уже существует, пропускаю загрузку.")
