@@ -25,19 +25,15 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
-# ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
-
-# ===== ВРЕМЕННО: ОСТАВЛЯЕМ ЗАГЛУШКИ, ПОТОМ ЗАМЕНИМ =====
-PHOTO_DB_FILE_ID = "ЗАМЕНИТЬ_ПОСЛЕ_ПОЛУЧЕНИЯ"
-ETALONS_FILE_ID = "ЗАМЕНИТЬ_ПОСЛЕ_ПОЛУЧЕНИЯ"
-
+PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
+ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
-# ===== ПЕРЕВОДЫ (сокращены для места) =====
+# ===== ПЕРЕВОДЫ =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -143,7 +139,7 @@ T = {
     }
 }
 
-# ===== КАТЕГОРИИ (только ключевые для демонстрации) =====
+# ===== КАТЕГОРИИ (полный набор) =====
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos."},
@@ -258,26 +254,13 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== ФУНКЦИИ ДЛЯ СКАЧИВАНИЯ (СИНХРОННЫЕ, БЕЗ ASYNCIO) =====
-def download_file_by_id(app, file_id, destination):
-    try:
-        file_info = app.bot.get_file(file_id)
-        file_info.download(destination)
-        print(f"✅ Файл сохранён: {destination}")
-        return True
-    except Exception as e:
-        print(f"❌ Ошибка скачивания: {e}")
-        return False
-
-def download_and_extract_photos(app):
+# ===== СКАЧИВАНИЕ С DROPBOX =====
+def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db уже существует, пропускаю загрузку.")
         return
-    print("📥 Скачиваю photo_db.zip из Telegram...")
-    if not download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
-        print("❌ Не удалось скачать photo_db.zip")
-        return
-    print("📦 Распаковываю...")
+    print("📥 Скачиваю photo_db.zip через Dropbox...")
+    gdown.download(PHOTO_DB_URL, "photo_db.zip", quiet=False)
     with zipfile.ZipFile("photo_db.zip", "r") as zf:
         zf.extractall(".")
     os.remove("photo_db.zip")
@@ -288,15 +271,15 @@ def download_and_extract_photos(app):
                 break
     print(f"✅ photo_db готова, файлов: {len(os.listdir('photo_db'))}")
 
-def download_and_extract_etalons(app):
+def download_and_extract_etalons():
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons уже существует, пропускаю загрузку.")
         return
-    print("📥 Скачиваю etalons.zip из Telegram...")
-    if not download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
-        print("❌ Не удалось скачать etalons.zip")
-        return
-    print("📦 Распаковываю...")
+    print("📥 Скачиваю etalons.zip через Dropbox...")
+    response = requests.get(ETALONS_URL, stream=True)
+    with open("etalons.zip", "wb") as f:
+        for chunk in response.iter_content(8192):
+            f.write(chunk)
     with zipfile.ZipFile("etalons.zip", "r") as zf:
         zf.extractall(".")
     os.remove("etalons.zip")
@@ -391,7 +374,6 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")]
     ])
 
-# ===== PDF =====
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -614,30 +596,19 @@ async def stats_command(update, context):
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
-# ===== ВРЕМЕННЫЙ ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ FILE_ID =====
-# Этот обработчик будет реагировать на любой документ и присылать его file_id.
-# После получения file_id ты удалишь его и подставишь file_id в переменные выше.
-async def get_file_id(update, context):
-    if update.message.document:
-        file_id = update.message.document.file_id
-        await update.message.reply_text(f"📎 file_id: `{file_id}`")
-    else:
-        await update.message.reply_text("Отправьте мне файл (документ).")
-
 # ===== ЗАПУСК =====
 if __name__ == "__main__":
     init_db()
+    download_and_extract_photos()
+    download_and_extract_etalons()
+    rebuild_index()
+    load_index()
+    load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
-
-    # ===== ВРЕМЕННО: РЕГИСТРИРУЕМ ОБРАБОТЧИК ДЛЯ FILE_ID =====
-    app.add_handler(MessageHandler(filters.Document.ALL, get_file_id))
-
-    # ===== ОСНОВНЫЕ ОБРАБОТЧИКИ =====
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-
-    print("🚀 Бот запущен. Отправьте файлы, чтобы получить file_id.")
+    print("🚀 Bot started.")
     app.run_polling()
