@@ -11,9 +11,8 @@ import subprocess
 import io
 import datetime as dt
 import json
-import asyncio
 from datetime import timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, MessageHandler, filters, CallbackQueryHandler, CommandHandler
 from PIL import Image
 import torch
@@ -29,32 +28,32 @@ from reportlab.lib.fonts import addMapping
 # ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 
-# ===== ВСТАВЬ СВОИ FILE_ID (получи их, отправив архивы боту) =====
-PHOTO_DB_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_PHOTO_DB_ZIP"
-ETALONS_FILE_ID = "ВАШ_FILE_ID_ДЛЯ_ETALONS_ZIP"
+# ===== ВРЕМЕННО: ОСТАВЛЯЕМ ЗАГЛУШКИ, ПОТОМ ЗАМЕНИМ =====
+PHOTO_DB_FILE_ID = "ЗАМЕНИТЬ_ПОСЛЕ_ПОЛУЧЕНИЯ"
+ETALONS_FILE_ID = "ЗАМЕНИТЬ_ПОСЛЕ_ПОЛУЧЕНИЯ"
 
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
-# ===== ПЕРЕВОДЫ =====
+# ===== ПЕРЕВОДЫ (сокращены для места) =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
-        "language_set": "✅ Language set to English. Send a photo of electrical installation.",
+        "language_set": "✅ Language set to English.",
         "defect_found": "🔍 **Defect found:**",
         "standard": "📜 Standard:",
-        "no_match": "❌ No similar examples found. Try another photo or send it for review.",
+        "no_match": "❌ No similar examples found.",
         "report_ready": "📄 Your order is ready!",
-        "no_defects": "📭 No defects recorded. Please send photos first.",
-        "review_empty": "📭 Review folder is empty or does not exist.",
-        "review_photos_found": "📸 Found {count} photos. Sending...",
+        "no_defects": "📭 No defects recorded.",
+        "review_empty": "📭 Review folder is empty.",
+        "review_photos_found": "📸 Found {count} photos.",
         "review_done": "✅ All photos sent.",
         "stats": "📊 Bot Statistics:\n👥 Total users: {total}\n📈 New today: {today}\n📅 New this week: {week}",
         "stats_unauthorized": "⛔ Not authorized.",
         "choose_language": "🌐 Choose your language:",
-        "report_action": "🛠 Recommended action: Bring into compliance with the requirements of applicable regulatory and technical documents (RTD).",
+        "report_action": "🛠 Recommended action: bring into compliance with RTD.",
         "defects_list": "🔍 Found defects:",
         "generate_order": "📄 Generate order",
         "classify_prompt": "📸 Classify this photo:",
@@ -76,25 +75,25 @@ T = {
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
-        "language_set": "✅ Язык установлен на русский. Отправьте фото электроустановки.",
+        "language_set": "✅ Язык установлен на русский.",
         "defect_found": "🔍 **Найдено замечание:**",
         "standard": "📜 Норматив:",
-        "no_match": "❌ Похожих примеров не найдено. Попробуйте другое фото или отправьте на доработку.",
+        "no_match": "❌ Похожих примеров не найдено.",
         "report_ready": "📄 Ваше предписание готово!",
-        "no_defects": "📭 Нет замечаний для предписания. Сначала отправьте фотографии.",
-        "review_empty": "📭 Папка review пуста или не существует.",
-        "review_photos_found": "📸 Найдено {count} фото. Отправляю...",
+        "no_defects": "📭 Нет замечаний.",
+        "review_empty": "📭 Папка review пуста.",
+        "review_photos_found": "📸 Найдено {count} фото.",
         "review_done": "✅ Все фото отправлены.",
         "stats": "📊 Статистика бота:\n👥 Всего пользователей: {total}\n📈 Новых сегодня: {today}\n📅 За неделю: {week}",
         "stats_unauthorized": "⛔ Вы не авторизованы.",
         "choose_language": "🌐 Выберите язык:",
-        "report_action": "🛠 Необходимо привести в соответствие с требованиями действующих нормативно-технических документов (НТД).",
+        "report_action": "🛠 Привести в соответствие с НТД.",
         "defects_list": "🔍 Найдены замечания:",
         "generate_order": "📄 Сформировать предписание",
         "classify_prompt": "📸 Классифицируйте это фото:",
-        "classify_success": "✅ Фото добавлено в категорию {category}",
+        "classify_success": "✅ Фото добавлено в {category}",
         "classify_skipped": "⏭️ Пропущено",
-        "classify_rejected": "❌ Отклонено и удалено",
+        "classify_rejected": "❌ Отклонено",
         "order_title": "ПРЕДПИСАНИЕ",
         "issue_date": "Дата выдачи:",
         "defect": "Замечание",
@@ -110,25 +109,25 @@ T = {
     },
     "es": {
         "welcome": "¡Hola! 👋\nSoy un bot de inspección técnica. Envíame una foto de una instalación eléctrica y encontraré posibles infracciones.\n\n¡Solo envía una foto!",
-        "language_set": "✅ Idioma configurado al español. Envía una foto de una instalación eléctrica.",
+        "language_set": "✅ Idioma configurado al español.",
         "defect_found": "🔍 **Defecto encontrado:**",
         "standard": "📜 Normativa:",
-        "no_match": "❌ No se encontraron ejemplos similares. Prueba con otra foto o envíala para revisión.",
+        "no_match": "❌ No se encontraron ejemplos similares.",
         "report_ready": "📄 ¡Su orden está lista!",
-        "no_defects": "📭 No hay defectos registrados. Envía fotos primero.",
-        "review_empty": "📭 La carpeta de revisión está vacía o no existe.",
-        "review_photos_found": "📸 Encontradas {count} fotos. Enviando...",
+        "no_defects": "📭 No hay defectos.",
+        "review_empty": "📭 La carpeta de revisión está vacía.",
+        "review_photos_found": "📸 Encontradas {count} fotos.",
         "review_done": "✅ Todas las fotos enviadas.",
-        "stats": "📊 Estadísticas del bot:\n👥 Usuarios totales: {total}\n📈 Nuevos hoy: {today}\n📅 Nueva esta semana: {week}",
+        "stats": "📊 Estadísticas:\n👥 Usuarios: {total}\n📈 Nuevos hoy: {today}\n📅 Semana: {week}",
         "stats_unauthorized": "⛔ No autorizado.",
         "choose_language": "🌐 Elige tu idioma:",
-        "report_action": "🛠 Acción recomendada: Cumplir con los requisitos de los documentos técnicos y normativos aplicables.",
+        "report_action": "🛠 Acción recomendada: cumplir con NTD.",
         "defects_list": "🔍 Defectos encontrados:",
         "generate_order": "📄 Generar orden",
         "classify_prompt": "📸 Clasifica esta foto:",
         "classify_success": "✅ Foto añadida a {category}",
         "classify_skipped": "⏭️ Omitida",
-        "classify_rejected": "❌ Rechazada y eliminada",
+        "classify_rejected": "❌ Rechazada",
         "order_title": "ORDEN",
         "issue_date": "Fecha de emisión:",
         "defect": "Defecto",
@@ -144,7 +143,7 @@ T = {
     }
 }
 
-# ===== КАТЕГОРИИ =====
+# ===== КАТЕГОРИИ (только ключевые для демонстрации) =====
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos."},
@@ -259,23 +258,23 @@ image_paths = None
 embedder = None
 transform = None
 
-# ===== АСИНХРОННЫЕ ФУНКЦИИ ДЛЯ СКАЧИВАНИЯ =====
-async def download_file_by_id(app, file_id, destination):
+# ===== ФУНКЦИИ ДЛЯ СКАЧИВАНИЯ (СИНХРОННЫЕ, БЕЗ ASYNCIO) =====
+def download_file_by_id(app, file_id, destination):
     try:
-        file_info = await app.bot.get_file(file_id)
-        await file_info.download_to_drive(destination)
+        file_info = app.bot.get_file(file_id)
+        file_info.download(destination)
         print(f"✅ Файл сохранён: {destination}")
         return True
     except Exception as e:
         print(f"❌ Ошибка скачивания: {e}")
         return False
 
-async def download_and_extract_photos(app):
+def download_and_extract_photos(app):
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
         print("📁 photo_db уже существует, пропускаю загрузку.")
         return
     print("📥 Скачиваю photo_db.zip из Telegram...")
-    if not await download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
+    if not download_file_by_id(app, PHOTO_DB_FILE_ID, "photo_db.zip"):
         print("❌ Не удалось скачать photo_db.zip")
         return
     print("📦 Распаковываю...")
@@ -289,12 +288,12 @@ async def download_and_extract_photos(app):
                 break
     print(f"✅ photo_db готова, файлов: {len(os.listdir('photo_db'))}")
 
-async def download_and_extract_etalons(app):
+def download_and_extract_etalons(app):
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
         print("📁 etalons уже существует, пропускаю загрузку.")
         return
     print("📥 Скачиваю etalons.zip из Telegram...")
-    if not await download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
+    if not download_file_by_id(app, ETALONS_FILE_ID, "etalons.zip"):
         print("❌ Не удалось скачать etalons.zip")
         return
     print("📦 Распаковываю...")
@@ -615,31 +614,30 @@ async def stats_command(update, context):
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
+# ===== ВРЕМЕННЫЙ ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ FILE_ID =====
+# Этот обработчик будет реагировать на любой документ и присылать его file_id.
+# После получения file_id ты удалишь его и подставишь file_id в переменные выше.
+async def get_file_id(update, context):
+    if update.message.document:
+        file_id = update.message.document.file_id
+        await update.message.reply_text(f"📎 file_id: `{file_id}`")
+    else:
+        await update.message.reply_text("Отправьте мне файл (документ).")
+
 # ===== ЗАПУСК =====
-async def main():
+if __name__ == "__main__":
     init_db()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
 
-    # Скачиваем архивы из Telegram
-    await download_and_extract_photos(app)
-    await download_and_extract_etalons(app)
+    # ===== ВРЕМЕННО: РЕГИСТРИРУЕМ ОБРАБОТЧИК ДЛЯ FILE_ID =====
+    app.add_handler(MessageHandler(filters.Document.ALL, get_file_id))
 
-    # Если папки не появились — выходим
-    if not os.path.exists("photo_db"):
-        print("❌ Не удалось загрузить фото, бот не запустится.")
-        return
-
-    rebuild_index()
-    load_index()
-    load_model()
-
+    # ===== ОСНОВНЫЕ ОБРАБОТЧИКИ =====
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started.")
-    await app.run_polling()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    print("🚀 Бот запущен. Отправьте файлы, чтобы получить file_id.")
+    app.run_polling()
