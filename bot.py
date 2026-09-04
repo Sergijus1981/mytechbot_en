@@ -25,7 +25,9 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
-TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
+import os
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 PHOTO_DB_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/photo_db.zip"
 ETALONS_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/etalons.zip"
