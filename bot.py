@@ -25,19 +25,16 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
-# ===== КОНФИГ =====
 TOKEN = "8993796250:AAFWDsfKuc4Bvha2ED-fvUyONlQ_iiNpCCk"
 
-# ===== DROPBOX ССЫЛКИ =====
-PHOTO_DB_URL = "https://dl.dropboxusercontent.com/scl/fi/xxl7bna8h3re0ks9jdsy6/photo_db.zip?rlkey=j94j0yuv1e3sg67txyzda4zo9&dl=1"
-ETALONS_URL = "https://dl.dropboxusercontent.com/scl/fi/c7xk15hjnjx1eyzwmwrds/etalons.zip?rlkey=xos4ax8t621r6w8r16ji0tsk1&dl=1"
+PHOTO_DB_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/photo_db.zip"
+ETALONS_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/etalons.zip"
 
 INDEX_PATH = "faiss_index.bin"
 PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
-# ===== ПЕРЕВОДЫ (СОКРАЩЕНЫ ДЛЯ МЕСТА, НО ПОЛНЫЕ) =====
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -140,32 +137,64 @@ T = {
         "signature": "Firma: ___________________",
         "received_by": "RECIBIDO POR:",
         "violation_photo": "Foto de la infracción"
+    },
+    "sw": {
+        "welcome": "Habari! 👋\nMimi ni bot ya ukaguzi wa kiufundi. Nitume picha ya usakinishaji wa umeme, nami nitapata kasoro zinazowezekana.\n\nTuma picha tu!",
+        "language_set": "✅ Lugha imewekwa Kiswahili.",
+        "defect_found": "🔍 **Kasoro imepatikana:**",
+        "standard": "📜 Kiwango:",
+        "no_match": "❌ Hakuna mifano sawa iliyopatikana.",
+        "report_ready": "📄 Agizo lako liko tayari!",
+        "no_defects": "📭 Hakuna kasoro zilizorekodiwa.",
+        "review_empty": "📭 Folda ya ukaguzi haina picha.",
+        "review_photos_found": "📸 Picha {count} zimepatikana.",
+        "review_done": "✅ Picha zote zimetumwa.",
+        "stats": "📊 Takwimu:\n👥 Jumla ya watumiaji: {total}\n📈 Wapya leo: {today}\n📅 Wiki hii: {week}",
+        "stats_unauthorized": "⛔ Hauruhusiwi.",
+        "choose_language": "🌐 Chagua lugha yako:",
+        "report_action": "🛠 Hatua inayopendekezwa: leta katika kiwango.",
+        "defects_list": "🔍 Kasoro zilizopatikana:",
+        "generate_order": "📄 Tengeneza agizo",
+        "classify_prompt": "📸 Ainisha picha hii:",
+        "classify_success": "✅ Picha imeongezwa kwenye {category}",
+        "classify_skipped": "⏭️ Imerukwa",
+        "classify_rejected": "❌ Imekataliwa",
+        "order_title": "AGIZO",
+        "issue_date": "Tarehe ya kutolewa:",
+        "defect": "Kasoro",
+        "standard_label": "Kiwango:",
+        "deadline": "Tarehe ya mwisho wa kurekebisha: _______________",
+        "issued_by": "ILITOA AGIZO:",
+        "company": "Kampuni: ___________________",
+        "position": "Nafasi: _________________",
+        "full_name": "Jina kamili: _______________________",
+        "signature": "Sahihi: ___________________",
+        "received_by": "ALIPOKEA:",
+        "violation_photo": "Picha ya ukiukaji"
     }
 }
 
-# ===== КАТЕГОРИИ =====
 CATEGORIES = [
-    {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas",
-     "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos."},
-     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9"}},
-    {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones",
-     "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar."},
-     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}},
-    {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra",
-     "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra."},
-     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}},
-    {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos",
-     "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados."},
-     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8"}},
-    {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación",
-     "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы y ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos."},
-     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12"}},
-    {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama",
-     "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar."},
-     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22"}}
+    {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi",
+     "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo."},
+     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9"}},
+    {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo",
+     "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri."},
+     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}},
+    {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza",
+     "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa."},
+     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}},
+    {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti",
+     "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa."},
+     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8"}},
+    {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu",
+     "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы y ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo."},
+     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12"}},
+    {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro",
+     "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo."},
+     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22"}}
 ]
 
-# ===== БАЗА ДАННЫХ =====
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
@@ -244,7 +273,6 @@ def delete_session(user_id):
     conn.commit()
     conn.close()
 
-# ===== ШРИФТ =====
 try:
     pdfmetrics.registerFont(ttfonts.TTFont('DejaVuSans', 'DejaVuSans.ttf'))
     addMapping('DejaVuSans', 0, 0, 'DejaVuSans')
@@ -252,18 +280,16 @@ try:
 except:
     FONT = 'Helvetica'
 
-# ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 index = None
 image_paths = None
 embedder = None
 transform = None
 
-# ===== СКАЧИВАНИЕ ИЗ DROPBOX (СИНХРОННОЕ) =====
 def download_and_extract_photos():
     if os.path.exists("photo_db") and len(os.listdir("photo_db")) > 0:
-        print("📁 photo_db уже существует, пропускаю загрузку.")
+        print("📁 photo_db already exists, skipping download.")
         return
-    print("📥 Скачиваю photo_db.zip через Dropbox...")
+    print("📥 Downloading photo_db.zip...")
     gdown.download(PHOTO_DB_URL, "photo_db.zip", quiet=False)
     with zipfile.ZipFile("photo_db.zip", "r") as zf:
         zf.extractall(".")
@@ -273,13 +299,13 @@ def download_and_extract_photos():
             if os.path.isdir(item) and item.startswith("photo_db"):
                 os.rename(item, "photo_db")
                 break
-    print(f"✅ photo_db готова, файлов: {len(os.listdir('photo_db'))}")
+    print(f"✅ photo_db ready, files: {len(os.listdir('photo_db'))}")
 
 def download_and_extract_etalons():
     if os.path.exists("etalons") and len(os.listdir("etalons")) > 0:
-        print("📁 etalons уже существует, пропускаю загрузку.")
+        print("📁 etalons already exists, skipping download.")
         return
-    print("📥 Скачиваю etalons.zip через Dropbox...")
+    print("📥 Downloading etalons.zip...")
     response = requests.get(ETALONS_URL, stream=True)
     with open("etalons.zip", "wb") as f:
         for chunk in response.iter_content(8192):
@@ -292,10 +318,10 @@ def download_and_extract_etalons():
             if os.path.isdir(item) and item.startswith("etalons"):
                 os.rename(item, "etalons")
                 break
-    print(f"✅ etalons готова, файлов: {len(os.listdir('etalons'))}")
+    print(f"✅ etalons ready, files: {len(os.listdir('etalons'))}")
 
 def rebuild_index():
-    print("🔄 Перестраиваю индекс...")
+    print("🔄 Rebuilding index...")
     subprocess.run(["python", "index_builder.py"], check=True)
     load_index()
 
@@ -306,7 +332,7 @@ def load_index():
         with open(PATHS_PATH, "rb") as f:
             raw = pickle.load(f)
         image_paths = [os.path.join("photo_db", os.path.basename(p)) for p in raw]
-        print(f"Индекс загружен, {len(image_paths)} изображений.")
+        print(f"Index loaded, {len(image_paths)} images.")
 
 def load_model():
     global embedder, transform
@@ -320,9 +346,9 @@ def load_model():
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-            print("Модель загружена.")
+            print("Model loaded.")
         except Exception as e:
-            print(f"⚠️ Модель не загружена: {e}")
+            print(f"⚠️ Model not loaded: {e}")
             embedder = None
 
 def get_embedding(image_path):
@@ -351,7 +377,7 @@ def get_category_info(filename, lang):
                 "normative": cat["normative"].get(lang, cat["normative"]["en"])
             }
     return {
-        "text": f"Unknown defect (file: {name})" if lang=="en" else f"Desconocido (archivo: {name})" if lang=="es" else f"Неизвестное замечание (файл: {name})",
+        "text": f"Unknown defect (file: {name})" if lang=="en" else f"Desconocido (archivo: {name})" if lang=="es" else f"Неизвестное замечание (файл: {name})" if lang=="ru" else f"Kasoro isiyojulikana (faili: {name})",
         "etalon_prefix": None,
         "normative": None
     }
@@ -367,7 +393,6 @@ def find_etalon(prefix):
             return os.path.join(etalon_dir, f)
     return None
 
-# ===== КЛАВИАТУРЫ =====
 def get_report_keyboard(lang):
     return InlineKeyboardMarkup([[InlineKeyboardButton(T[lang]['generate_order'], callback_data="generate_report")]])
 
@@ -375,10 +400,10 @@ def get_language_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-        [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")]
+        [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")],
+        [InlineKeyboardButton("🇰🇪 Kiswahili", callback_data="lang_sw")]
     ])
 
-# ===== PDF =====
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -426,7 +451,6 @@ def generate_pdf_report(report_data, lang):
     buffer.seek(0)
     return buffer
 
-# ===== ОБРАБОТЧИКИ =====
 async def handle_photo(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
@@ -507,7 +531,7 @@ async def button_callback(update, context):
         pdf_buffer = generate_pdf_report(report_data, lang)
         await query.message.reply_document(
             document=pdf_buffer,
-            filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="ru" else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="en" else f"Orden_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
+            filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="ru" else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="en" else f"Orden_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="es" else f"Agizo_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
             caption=t['report_ready']
         )
         delete_session(user_id)
@@ -547,7 +571,7 @@ async def button_callback(update, context):
                 os.remove(photo_path)
             rebuild_index()
             await query.edit_message_text(t['classify_success'].format(
-                category=cat["label_ru"] if lang=="ru" else cat["label_en"] if lang=="en" else cat["label_es"]
+                category=cat["label_ru"] if lang=="ru" else cat["label_en"] if lang=="en" else cat["label_es"] if lang=="es" else cat["label_sw"]
             ))
         if context.user_data['review_photos']:
             next_photo = context.user_data['review_photos'][0]
@@ -601,7 +625,6 @@ async def stats_command(update, context):
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
-# ===== ЗАПУСК =====
 if __name__ == "__main__":
     init_db()
     download_and_extract_photos()
@@ -615,5 +638,5 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (Dropbox).")
+    print("🚀 Bot started (GitHub + Swahili ready).")
     app.run_polling()
