@@ -563,4 +563,133 @@ async def button_callback(update, context):
         if not report_data:
             await query.edit_message_text(t['no_defects'])
             return
-        pdf_buffer = generate_pdf_report
+        pdf_buffer = generate_pdf_report(report_data, lang)
+        if lang == "ru":
+            fname = f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
+        elif lang == "es":
+            fname = f"Orden_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
+        elif lang == "sw":
+            fname = f"Agizo_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
+        elif lang == "de":
+            fname = f"Anordnung_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
+        else:
+            fname = f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
+        await query.message.reply_document(
+            document=pdf_buffer,
+            filename=fname,
+            caption=t['report_ready']
+        )
+        delete_session(user_id)
+        context.user_data.pop('report_data', None)
+        await query.delete_message()
+        return
+
+    if data.startswith("lang_"):
+        new_lang = data.split("_")[1]
+        set_lang(user_id, new_lang)
+        await query.edit_message_text(T[new_lang]['welcome'])
+        return
+
+    if data.startswith("classify_"):
+        action = data.split("_", 1)[1]
+        if 'review_photos' not in context.user_data or not context.user_data['review_photos']:
+            await query.edit_message_text("❌ No photos left.")
+            return
+        photo_path = context.user_data['review_photos'].pop(0)
+        if action == "skip":
+            await query.edit_message_text(t['classify_skipped'])
+        elif action == "reject":
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+            await query.edit_message_text(t['classify_rejected'])
+        else:
+            cat = next((c for c in CATEGORIES if c["keyword"] == action), None)
+            if not cat:
+                await query.edit_message_text("❌ Unknown category.")
+                return
+            target = os.path.join("photo_db", cat["keyword"])
+            os.makedirs(target, exist_ok=True)
+            new_name = f"{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            new_path = os.path.join(target, new_name)
+            shutil.copy2(photo_path, new_path)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+            rebuild_index()
+            if lang == "ru":
+                cat_label = cat["label_ru"]
+            elif lang == "es":
+                cat_label = cat["label_es"]
+            elif lang == "sw":
+                cat_label = cat["label_sw"]
+            elif lang == "de":
+                cat_label = cat["label_de"]
+            else:
+                cat_label = cat["label_en"]
+            await query.edit_message_text(t['classify_success'].format(category=cat_label))
+        if context.user_data['review_photos']:
+            next_photo = context.user_data['review_photos'][0]
+            with open(next_photo, 'rb') as f:
+                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_language_keyboard())
+        else:
+            await query.message.reply_text(t['review_done'])
+        return
+
+async def start_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+    lang = get_lang(user_id)
+    await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
+
+async def review_command(update, context):
+    user_id = update.effective_user.id
+    register_user(user_id)
+    lang = get_lang(user_id)
+    t = T[lang]
+    review_dir = "review"
+    if not os.path.exists(review_dir):
+        os.makedirs(review_dir, exist_ok=True)
+        await update.message.reply_text(t['review_empty'])
+        return
+    photos = []
+    for root, _, files in os.walk(review_dir):
+        for f in files:
+            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                photos.append(os.path.join(root, f))
+    if not photos:
+        await update.message.reply_text(t['review_empty'])
+        return
+    await update.message.reply_text(t['review_photos_found'].format(count=len(photos)))
+    for path in photos:
+        try:
+            with open(path, 'rb') as f:
+                await update.message.reply_photo(photo=f)
+        except Exception as e:
+            print(f"❌ Error sending {path}: {e}")
+            await update.message.reply_text(f"❌ Could not send: {os.path.basename(path)}")
+    await update.message.reply_text(t['review_done'])
+
+async def stats_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        lang = get_lang(user_id)
+        await update.message.reply_text(T[lang]['stats_unauthorized'])
+        return
+    total, today, week = get_stats()
+    lang = get_lang(user_id)
+    await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
+
+if __name__ == "__main__":
+    init_db()
+    download_and_extract_photos()
+    download_and_extract_etalons()
+    rebuild_index()
+    load_index()
+    load_model()
+    app = Application.builder().token(TOKEN).read_timeout(60).build()
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("review", review_command))
+    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(CallbackQueryHandler(button_callback))
+    print("🚀 Bot started (GitHub + Swahili + German ready).")
+    app.run_polling()
