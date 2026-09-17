@@ -35,6 +35,11 @@ PATHS_PATH = "image_paths.pkl"
 MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
+FREE_CHECKS_LIMIT = 5
+PRICE_10_CHECKS = 50
+PRICE_MONTH = 200
+USDC_WALLET = "ECHv1ym6h9AEq9tDfvSdvcCJiTGAjK5oGdzsBovBwbvS"
+
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -68,7 +73,17 @@ T = {
         "full_name": "Full name: _______________________",
         "signature": "Signature: ___________________",
         "received_by": "RECEIVED BY:",
-        "violation_photo": "Violation photo"
+        "violation_photo": "Violation photo",
+        "free_checks_left": "✅ You have {count} free checks left.",
+        "free_checks_used": "⚠️ Free checks used up.",
+        "buy_button": "💳 Buy checks",
+        "buy_title": "💳 Buy more checks",
+        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $5 (50 USDC)\n• Unlimited (1 month) — $20 (200 USDC)\n\nSend USDC (Solana) to:\n`{wallet}`\n\nAfter payment, message @Sergijus_incorporated and we'll activate your access.",
+        "pay_sent": "✅ I've sent payment",
+        "balance_title": "📊 Your balance",
+        "balance_text": "Free checks left: {free}\nPaid checks left: {paid}",
+        "admin_added": "✅ Added {count} checks to user {user_id}.",
+        "admin_usage": "Usage: /addchecks <user_id> <count>"
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -102,75 +117,17 @@ T = {
         "full_name": "ФИО: _______________________",
         "signature": "Подпись: ___________________",
         "received_by": "ВЗЯЛ В РАБОТУ:",
-        "violation_photo": "Фото нарушения"
-    },
-    "es": {
-        "welcome": "¡Hola! 👋\nSoy un bot de inspección técnica. Envíame una foto de una instalación eléctrica y encontraré posibles infracciones.\n\n¡Solo envía una foto!",
-        "language_set": "✅ Idioma configurado al español.",
-        "defect_found": "🔍 **Defecto encontrado:**",
-        "standard": "📜 Normativa:",
-        "no_match": "❌ No se encontraron ejemplos similares.",
-        "report_ready": "📄 ¡Su orden está lista!",
-        "no_defects": "📭 No hay defectos.",
-        "review_empty": "📭 La carpeta de revisión está vacía.",
-        "review_photos_found": "📸 Encontradas {count} fotos.",
-        "review_done": "✅ Todas las fotos enviadas.",
-        "stats": "📊 Estadísticas:\n👥 Usuarios: {total}\n📈 Nuevos hoy: {today}\n📅 Semana: {week}",
-        "stats_unauthorized": "⛔ No autorizado.",
-        "choose_language": "🌐 Elige tu idioma:",
-        "report_action": "🛠 Acción recomendada: cumplir con las normas.",
-        "defects_list": "🔍 Defectos encontrados:",
-        "generate_order": "📄 Generar orden",
-        "classify_prompt": "📸 Clasifica esta foto:",
-        "classify_success": "✅ Foto añadida a {category}",
-        "classify_skipped": "⏭️ Omitida",
-        "classify_rejected": "❌ Rechazada",
-        "order_title": "ORDEN",
-        "issue_date": "Fecha de emisión:",
-        "defect": "Defecto",
-        "standard_label": "Normativa:",
-        "deadline": "Plazo de corrección: _______________",
-        "issued_by": "EMITIDO POR:",
-        "company": "Compañía: ___________________",
-        "position": "Cargo: _________________",
-        "full_name": "Nombre completo: _______________________",
-        "signature": "Firma: ___________________",
-        "received_by": "RECIBIDO POR:",
-        "violation_photo": "Foto de la infracción"
-    },
-    "sw": {
-        "welcome": "Habari! 👋\nMimi ni bot ya ukaguzi wa kiufundi. Nitume picha ya usakinishaji wa umeme, nami nitapata kasoro zinazowezekana.\n\nTuma picha tu!",
-        "language_set": "✅ Lugha imewekwa Kiswahili.",
-        "defect_found": "🔍 **Kasoro imepatikana:**",
-        "standard": "📜 Kiwango:",
-        "no_match": "❌ Hakuna mifano sawa iliyopatikana.",
-        "report_ready": "📄 Agizo lako liko tayari!",
-        "no_defects": "📭 Hakuna kasoro zilizorekodiwa.",
-        "review_empty": "📭 Folda ya ukaguzi haina picha.",
-        "review_photos_found": "📸 Picha {count} zimepatikana.",
-        "review_done": "✅ Picha zote zimetumwa.",
-        "stats": "📊 Takwimu:\n👥 Jumla ya watumiaji: {total}\n📈 Wapya leo: {today}\n📅 Wiki hii: {week}",
-        "stats_unauthorized": "⛔ Hauruhusiwi.",
-        "choose_language": "🌐 Chagua lugha yako:",
-        "report_action": "🛠 Hatua inayopendekezwa: leta katika kiwango.",
-        "defects_list": "🔍 Kasoro zilizopatikana:",
-        "generate_order": "📄 Tengeneza agizo",
-        "classify_prompt": "📸 Ainisha picha hii:",
-        "classify_success": "✅ Picha imeongezwa kwenye {category}",
-        "classify_skipped": "⏭️ Imerukwa",
-        "classify_rejected": "❌ Imekataliwa",
-        "order_title": "AGIZO",
-        "issue_date": "Tarehe ya kutolewa:",
-        "defect": "Kasoro",
-        "standard_label": "Kiwango:",
-        "deadline": "Tarehe ya mwisho wa kurekebisha: _______________",
-        "issued_by": "ILITOA AGIZO:",
-        "company": "Kampuni: ___________________",
-        "position": "Nafasi: _________________",
-        "full_name": "Jina kamili: _______________________",
-        "signature": "Sahihi: ___________________",
-        "received_by": "ALIPOKEA:",
-        "violation_photo": "Picha ya ukiukaji"
+        "violation_photo": "Фото нарушения",
+        "free_checks_left": "✅ У вас осталось {count} бесплатных проверок.",
+        "free_checks_used": "⚠️ Бесплатные проверки закончились.",
+        "buy_button": "💳 Купить проверки",
+        "buy_title": "💳 Купить проверки",
+        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $5 (50 USDC)\n• Безлимит (1 месяц) — $20 (200 USDC)\n\nОтправьте USDC (Solana) на:\n`{wallet}`\n\nПосле оплаты напишите @Sergijus_incorporated — мы активируем доступ.",
+        "pay_sent": "✅ Я отправил оплату",
+        "balance_title": "📊 Ваш баланс",
+        "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}",
+        "admin_added": "✅ Добавлено {count} проверок пользователю {user_id}.",
+        "admin_usage": "Использование: /addchecks <user_id> <count>"
     },
     "de": {
         "welcome": "Hallo! 👋\nIch bin ein technischer Inspektionsbot. Senden Sie mir ein Foto einer elektrischen Anlage, und ich finde mögliche Verstöße.\n\nSenden Sie einfach ein Foto!",
@@ -204,7 +161,17 @@ T = {
         "full_name": "Vollständiger Name: _______________________",
         "signature": "Unterschrift: ___________________",
         "received_by": "ERHALTEN VON:",
-        "violation_photo": "Foto des Verstoßes"
+        "violation_photo": "Foto des Verstoßes",
+        "free_checks_left": "✅ Sie haben noch {count} kostenlose Prüfungen.",
+        "free_checks_used": "⚠️ Kostenlose Prüfungen aufgebraucht.",
+        "buy_button": "💳 Prüfungen kaufen",
+        "buy_title": "💳 Mehr Prüfungen kaufen",
+        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 5 $ (50 USDC)\n• Unbegrenzt (1 Monat) — 20 $ (200 USDC)\n\nSenden Sie USDC (Solana) an:\n`{wallet}`\n\nNach der Zahlung schreiben Sie @Sergijus_incorporated — wir aktivieren Ihren Zugang.",
+        "pay_sent": "✅ Ich habe bezahlt",
+        "balance_title": "📊 Ihr Guthaben",
+        "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}",
+        "admin_added": "✅ {count} Prüfungen für Nutzer {user_id} hinzugefügt.",
+        "admin_usage": "Verwendung: /addchecks <user_id> <count>"
     },
     "it": {
         "welcome": "Ciao! 👋\nSono un bot di ispezione tecnica. Inviami una foto di un impianto elettrico e troverò possibili violazioni.\n\nInvia semplicemente una foto!",
@@ -238,7 +205,17 @@ T = {
         "full_name": "Nome completo: _______________________",
         "signature": "Firma: ___________________",
         "received_by": "RICEVUTO DA:",
-        "violation_photo": "Foto della violazione"
+        "violation_photo": "Foto della violazione",
+        "free_checks_left": "✅ Hai ancora {count} controlli gratuiti.",
+        "free_checks_used": "⚠️ Controlli gratuiti esauriti.",
+        "buy_button": "💳 Acquista controlli",
+        "buy_title": "💳 Acquista più controlli",
+        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 5 $ (50 USDC)\n• Illimitato (1 mese) — 20 $ (200 USDC)\n\nInvia USDC (Solana) a:\n`{wallet}`\n\nDopo il pagamento, scrivi a @Sergijus_incorporated — attiveremo il tuo accesso.",
+        "pay_sent": "✅ Ho inviato il pagamento",
+        "balance_title": "📊 Il tuo saldo",
+        "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}",
+        "admin_added": "✅ Aggiunti {count} controlli all'utente {user_id}.",
+        "admin_usage": "Uso: /addchecks <user_id> <count>"
     },
     "fr": {
         "welcome": "Bonjour ! 👋\nJe suis un bot d'inspection technique. Envoyez-moi une photo d'une installation électrique et je trouverai les violations possibles.\n\nEnvoyez simplement une photo !",
@@ -272,7 +249,17 @@ T = {
         "full_name": "Nom complet : _______________________",
         "signature": "Signature : ___________________",
         "received_by": "REÇU PAR :",
-        "violation_photo": "Photo de la violation"
+        "violation_photo": "Photo de la violation",
+        "free_checks_left": "✅ Il vous reste {count} vérifications gratuites.",
+        "free_checks_used": "⚠️ Vérifications gratuites épuisées.",
+        "buy_button": "💳 Acheter des vérifications",
+        "buy_title": "💳 Acheter plus de vérifications",
+        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 5 $ (50 USDC)\n• Illimité (1 mois) — 20 $ (200 USDC)\n\nEnvoyez USDC (Solana) à :\n`{wallet}`\n\nAprès paiement, écrivez à @Sergijus_incorporated — nous activerons votre accès.",
+        "pay_sent": "✅ J'ai envoyé le paiement",
+        "balance_title": "📊 Votre solde",
+        "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}",
+        "admin_added": "✅ {count} vérifications ajoutées à l'utilisateur {user_id}.",
+        "admin_usage": "Utilisation : /addchecks <user_id> <count>"
     }
 }
 
@@ -315,7 +302,9 @@ def init_db():
         user_id INTEGER PRIMARY KEY,
         first_seen TEXT,
         last_seen TEXT,
-        language TEXT DEFAULT "en"
+        language TEXT DEFAULT "en",
+        free_checks INTEGER DEFAULT 5,
+        paid_checks INTEGER DEFAULT 0
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS sessions (
         user_id INTEGER,
@@ -330,7 +319,7 @@ def register_user(user_id):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     now = dt.datetime.now().isoformat()
-    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, language) VALUES (?, ?, ?, 'en')", (user_id, now, now))
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, language, free_checks, paid_checks) VALUES (?, ?, ?, 'en', ?, 0)", (user_id, now, now, FREE_CHECKS_LIMIT))
     c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
     conn.commit()
     conn.close()
@@ -348,6 +337,38 @@ def set_lang(user_id, lang):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     c.execute("UPDATE users SET language = ? WHERE user_id = ?", (lang, user_id))
+    conn.commit()
+    conn.close()
+
+def get_balance(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT free_checks, paid_checks FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    if r:
+        return r[0], r[1]
+    return 0, 0
+
+def use_check(user_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT free_checks, paid_checks FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if r:
+        free, paid = r
+        if free > 0:
+            c.execute("UPDATE users SET free_checks = free_checks - 1 WHERE user_id = ?", (user_id,))
+        elif paid > 0:
+            c.execute("UPDATE users SET paid_checks = paid_checks - 1 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        return True
+    conn.close()
+    return False
+
+def add_paid_checks(user_id, count):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("UPDATE users SET paid_checks = paid_checks + ? WHERE user_id = ?", (count, user_id))
     conn.commit()
     conn.close()
 
@@ -516,11 +537,15 @@ def get_language_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-        [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")],
-        [InlineKeyboardButton("🇰🇪 Kiswahili", callback_data="lang_sw")],
         [InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de")],
         [InlineKeyboardButton("🇮🇹 Italiano", callback_data="lang_it")],
         [InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr")]
+    ])
+
+def get_buy_keyboard(lang):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")],
+        [InlineKeyboardButton(T[lang]['pay_sent'], callback_data="pay_sent")]
     ])
 
 def generate_pdf_report(report_data, lang):
@@ -577,6 +602,15 @@ async def handle_photo(update, context):
     register_user(user_id)
     lang = get_lang(user_id)
     t = T[lang]
+
+    free, paid = get_balance(user_id)
+    if free <= 0 and paid <= 0:
+        await update.message.reply_text(
+            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDC_WALLET),
+            reply_markup=get_buy_keyboard(lang)
+        )
+        return
+
     load_index()
     load_model()
 
@@ -593,12 +627,14 @@ async def handle_photo(update, context):
         await update.message.reply_text(t['no_match'])
         return
 
+    use_check(user_id)
+    free_left, paid_left = get_balance(user_id)
+
     review_dir = "review"
     os.makedirs(review_dir, exist_ok=True)
     timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
     review_path = os.path.join(review_dir, f"{timestamp}.jpg")
     await file.download_to_drive(review_path)
-    print(f"Saved review: {review_path}")
 
     unique = []
     seen = set()
@@ -622,6 +658,8 @@ async def handle_photo(update, context):
         if d.get('normative_desc'):
             response += f"   → {d['normative_desc']}\n"
 
+    response += f"\n{t['free_checks_left'].format(count=free_left)}"
+
     report_data = [{
         'text': d['text'],
         'normative': d.get('normative'),
@@ -631,12 +669,16 @@ async def handle_photo(update, context):
     save_session(user_id, report_data)
     context.user_data['report_data'] = report_data
 
+    keyboard = get_report_keyboard(lang)
+    if free_left == 0 and paid_left == 0:
+        keyboard = get_buy_keyboard(lang)
+
     etalon_path = find_etalon(unique[0].get("etalon_prefix"))
     if etalon_path and os.path.exists(etalon_path):
         with open(etalon_path, 'rb') as f:
-            await update.message.reply_photo(photo=f, caption=response, reply_markup=get_report_keyboard(lang))
+            await update.message.reply_photo(photo=f, caption=response, reply_markup=keyboard)
     else:
-        await update.message.reply_text(response, reply_markup=get_report_keyboard(lang))
+        await update.message.reply_text(response, reply_markup=keyboard)
 
 async def button_callback(update, context):
     query = update.callback_query
@@ -647,6 +689,21 @@ async def button_callback(update, context):
     t = T[lang]
     data = query.data
 
+    if data == "buy_checks":
+        await query.message.reply_text(
+            t['buy_text'].format(wallet=USDC_WALLET),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(t['pay_sent'], callback_data="pay_sent")]
+            ])
+        )
+        return
+
+    if data == "pay_sent":
+        await query.message.reply_text(
+            "✅ Thank you! We'll verify your payment and activate access shortly. / Спасибо! Мы проверим оплату и активируем доступ в ближайшее время."
+        )
+        return
+
     if data == "generate_report":
         report_data = load_session(user_id) or context.user_data.get('report_data')
         if not report_data:
@@ -655,10 +712,6 @@ async def button_callback(update, context):
         pdf_buffer = generate_pdf_report(report_data, lang)
         if lang == "ru":
             fname = f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
-        elif lang == "es":
-            fname = f"Orden_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
-        elif lang == "sw":
-            fname = f"Agizo_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
         elif lang == "de":
             fname = f"Anordnung_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
         elif lang == "it":
@@ -667,11 +720,7 @@ async def button_callback(update, context):
             fname = f"Ordre_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
         else:
             fname = f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf"
-        await query.message.reply_document(
-            document=pdf_buffer,
-            filename=fname,
-            caption=t['report_ready']
-        )
+        await query.message.reply_document(document=pdf_buffer, filename=fname, caption=t['report_ready'])
         delete_session(user_id)
         context.user_data.pop('report_data', None)
         await query.delete_message()
@@ -683,87 +732,22 @@ async def button_callback(update, context):
         await query.edit_message_text(T[new_lang]['welcome'])
         return
 
-    if data.startswith("classify_"):
-        action = data.split("_", 1)[1]
-        if 'review_photos' not in context.user_data or not context.user_data['review_photos']:
-            await query.edit_message_text("❌ No photos left.")
-            return
-        photo_path = context.user_data['review_photos'].pop(0)
-        if action == "skip":
-            await query.edit_message_text(t['classify_skipped'])
-        elif action == "reject":
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-            await query.edit_message_text(t['classify_rejected'])
-        else:
-            cat = next((c for c in CATEGORIES if c["keyword"] == action), None)
-            if not cat:
-                await query.edit_message_text("❌ Unknown category.")
-                return
-            target = os.path.join("photo_db", cat["keyword"])
-            os.makedirs(target, exist_ok=True)
-            new_name = f"{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            new_path = os.path.join(target, new_name)
-            shutil.copy2(photo_path, new_path)
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-            rebuild_index()
-            if lang == "ru":
-                cat_label = cat["label_ru"]
-            elif lang == "es":
-                cat_label = cat["label_es"]
-            elif lang == "sw":
-                cat_label = cat["label_sw"]
-            elif lang == "de":
-                cat_label = cat["label_de"]
-            elif lang == "it":
-                cat_label = cat["label_it"]
-            elif lang == "fr":
-                cat_label = cat["label_fr"]
-            else:
-                cat_label = cat["label_en"]
-            await query.edit_message_text(t['classify_success'].format(category=cat_label))
-        if context.user_data['review_photos']:
-            next_photo = context.user_data['review_photos'][0]
-            with open(next_photo, 'rb') as f:
-                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_language_keyboard())
-        else:
-            await query.message.reply_text(t['review_done'])
-        return
-
 async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
 
-async def review_command(update, context):
+async def balance_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_lang(user_id)
     t = T[lang]
-    review_dir = "review"
-    if not os.path.exists(review_dir):
-        os.makedirs(review_dir, exist_ok=True)
-        await update.message.reply_text(t['review_empty'])
-        return
-    photos = []
-    for root, _, files in os.walk(review_dir):
-        for f in files:
-            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
-                photos.append(os.path.join(root, f))
-    if not photos:
-        await update.message.reply_text(t['review_empty'])
-        return
-    await update.message.reply_text(t['review_photos_found'].format(count=len(photos)))
-    for path in photos:
-        try:
-            with open(path, 'rb') as f:
-                await update.message.reply_photo(photo=f)
-        except Exception as e:
-            print(f"❌ Error sending {path}: {e}")
-            await update.message.reply_text(f"❌ Could not send: {os.path.basename(path)}")
-    await update.message.reply_text(t['review_done'])
+    free, paid = get_balance(user_id)
+    await update.message.reply_text(
+        t['balance_text'].format(free=free, paid=paid),
+        reply_markup=get_buy_keyboard(lang)
+    )
 
 async def stats_command(update, context):
     user_id = update.effective_user.id
@@ -775,6 +759,23 @@ async def stats_command(update, context):
     lang = get_lang(user_id)
     await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
 
+async def addchecks_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⛔ Not authorized.")
+        return
+    args = context.args
+    if len(args) != 2:
+        await update.message.reply_text("Usage: /addchecks <user_id> <count>")
+        return
+    try:
+        target = int(args[0])
+        count = int(args[1])
+        add_paid_checks(target, count)
+        await update.message.reply_text(f"✅ Added {count} checks to user {target}.")
+    except:
+        await update.message.reply_text("❌ Invalid arguments.")
+
 if __name__ == "__main__":
     init_db()
     download_and_extract_photos()
@@ -784,9 +785,10 @@ if __name__ == "__main__":
     load_model()
     app = Application.builder().token(TOKEN).read_timeout(60).build()
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("review", review_command))
+    app.add_handler(CommandHandler("balance", balance_command))
     app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("addchecks", addchecks_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (7 languages + EU standards, no emoji in PDF).")
+    print("🚀 Bot started (PAID version — 5 free checks + paid).")
     app.run_polling()
