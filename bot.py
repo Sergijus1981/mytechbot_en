@@ -539,10 +539,10 @@ def generate_pdf_report(report_data, lang):
         photo_path = report_data[0].get('photo_path') if report_data else None
         for i, item in enumerate(report_data, 1):
             story.append(Paragraph(f"<b>{t['defect']} #{i}</b>", styles['Heading2']))
-            story.append(Paragraph(f"📌 {item.get('text', '')}", styles['Normal']))
+                       story.append(Paragraph(f"{item.get('text', '')}", styles['Normal']))
             story.append(Paragraph(f"{t['standard_label']} {item.get('normative', '—')}", styles['Normal']))
             if item.get('normative_desc'):
-                story.append(Paragraph(f"📖 {item['normative_desc']}", styles['Normal']))
+                story.append(Paragraph(f"→ {item['normative_desc']}", styles['Normal']))
             story.append(Paragraph(t['report_action'], styles['Normal']))
             story.append(Spacer(1, 4*mm))
         if photo_path and os.path.exists(photo_path):
