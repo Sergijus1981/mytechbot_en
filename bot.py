@@ -50,7 +50,7 @@ T = {
         "stats": "📊 Bot Statistics:\n👥 Total users: {total}\n📈 New today: {today}\n📅 New this week: {week}",
         "stats_unauthorized": "⛔ Not authorized.",
         "choose_language": "🌐 Choose your language:",
-        "report_action": "🛠 Recommended action: bring into compliance with RTD.",
+        "report_action": "🛠 Recommended action: bring into compliance with standards.",
         "defects_list": "🔍 Found defects:",
         "generate_order": "📄 Generate order",
         "classify_prompt": "📸 Classify this photo:",
@@ -118,7 +118,7 @@ T = {
         "stats": "📊 Estadísticas:\n👥 Usuarios: {total}\n📈 Nuevos hoy: {today}\n📅 Semana: {week}",
         "stats_unauthorized": "⛔ No autorizado.",
         "choose_language": "🌐 Elige tu idioma:",
-        "report_action": "🛠 Acción recomendada: cumplir con NTD.",
+        "report_action": "🛠 Acción recomendada: cumplir con las normas.",
         "defects_list": "🔍 Defectos encontrados:",
         "generate_order": "📄 Generar orden",
         "classify_prompt": "📸 Clasifica esta foto:",
@@ -279,33 +279,33 @@ T = {
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi", "label_de":"Kennzeichnungen", "label_it":"Etichette", "label_fr":"Étiquettes",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo.", "de":"⚠️ Fehlende Kennzeichnungen an Kabeln/Geräten.", "it":"⚠️ Etichette mancanti su cavi/apparecchiature.", "fr":"⚠️ Étiquettes manquantes sur les câbles/équipements."},
-     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9", "de":"IEC 60445, NEC 110.22, BS 7671 514.9", "it":"IEC 60445, NEC 110.22, BS 7671 514.9", "fr":"IEC 60445, NEC 110.22, BS 7671 514.9"},
+     "normative":{"en":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "sw":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "de":"DIN VDE 0100-520:2023-04 §514.3, DIN EN 60445", "it":"CEI 64-8/5 Art. 514.3, CEI EN 60445", "fr":"NF C 15-100 Art. 514.3, NF EN 60445"},
      "normative_desc":{"en":"Identification of conductors and equipment.", "de":"Kennzeichnung von Leitern und Betriebsmitteln.", "it":"Identificazione di conduttori e apparecchiature.", "fr":"Identification des conducteurs et des équipements."}},
 
     {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo", "label_de":"Durchdringungen", "label_it":"Passaggi", "label_fr":"Traversées",
      "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri.", "de":"⚠️ Spalten in Durchdringungen nicht abgedichtet.", "it":"⚠️ Fessure nei passaggi non sigillate.", "fr":"⚠️ Interstices dans les traversées non scellés."},
-     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "de":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "it":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "fr":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"},
-     "normative_desc":{"en":"Sealing of cable and pipe penetrations.", "de":"Abdichtung von Kabel- und Rohrdurchführungen.", "it":"Sigillatura dei passaggi di cavi e tubi.", "fr":"Scellement des traversées de câbles et de tuyaux."}},
+     "normative":{"en":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "sw":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "de":"DIN VDE 0100-520:2023-04 §527.2, DIN 4102-12, MLAR §5", "it":"CEI 64-8/5 Art. 527.2, CEI 64-8/5 Art. 527.2.1", "fr":"NF C 15-100 Art. 527.2, NF C 15-100 Art. 527.2.1"},
+     "normative_desc":{"en":"Fire sealing of cable and pipe penetrations.", "de":"Brandschutz bei Kabel- und Rohrdurchführungen.", "it":"Protezione contro la propagazione del fuoco nei passaggi.", "fr":"Protection contre la propagation du feu dans les traversées."}},
 
     {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza", "label_de":"Erdung", "label_it":"Messa a terra", "label_fr":"Mise à la terre",
      "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa.", "de":"⚠️ Erdung nicht vorhanden.", "it":"⚠️ Messa a terra non fornita.", "fr":"⚠️ Mise à la terre non réalisée."},
-     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "de":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "it":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "fr":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"},
-     "normative_desc":{"en":"Protection against electric shock — earthing and bonding.", "de":"Schutz gegen elektrischen Schlag — Erdung und Potentialausgleich.", "it":"Protezione contro le scosse elettriche — messa a terra e equipotenziale.", "fr":"Protection contre les chocs électriques — mise à la terre et liaison équipotentielle."}},
+     "normative":{"en":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "sw":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "de":"DIN VDE 0100-540:2024-06 §542, §543, DIN VDE 0100-410 §411.3", "it":"CEI 64-8/54 Art. 542, Art. 543, CEI 64-8/41 Art. 411.3", "fr":"NF C 15-100 Art. 542, Art. 543, Art. 411.3"},
+     "normative_desc":{"en":"Earthing arrangements and protective conductors.", "de":"Erdungsanlagen und Schutzleiter.", "it":"Impianti di terra e conduttori di protezione.", "fr":"Installations de mise à la terre et conducteurs de protection."}},
 
     {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti", "label_de":"Gewindebolzen", "label_it":"Perni", "label_fr":"Goujons",
      "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa.", "de":"⚠️ Gewindebolzen der Kabeltrasse nicht abgeschnitten.", "it":"⚠️ Perni della canalina non tagliati.", "fr":"⚠️ Goujons du chemin de câbles non coupés."},
-     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8", "de":"IEC 61537, NEC 392.18, BS 7671 522.8", "it":"IEC 61537, NEC 392.18, BS 7671 522.8", "fr":"IEC 61537, NEC 392.18, BS 7671 522.8"},
-     "normative_desc":{"en":"Cable tray systems — safe installation requirements.", "de":"Kabeltrassensysteme — sichere Installationsanforderungen.", "it":"Sistemi di canalina portacavi — requisiti di installazione sicura.", "fr":"Systèmes de chemins de câbles — exigences d'installation sûre."}},
+     "normative":{"en":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "sw":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "de":"DIN VDE 0100-520 §522.8, DIN EN 61537", "it":"CEI 64-8/5 Art. 522.8, CEI EN 61537", "fr":"NF C 15-100 Art. 522.8, NF EN 61537"},
+     "normative_desc":{"en":"Cable tray systems — mechanical protection.", "de":"Kabeltrassensysteme — Schutz gegen mechanische Beschädigung.", "it":"Sistemi di canalina — protezione meccanica.", "fr":"Systèmes de chemins de câbles — protection mécanique."}},
 
     {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu", "label_de":"Oxidation", "label_it":"Ossidazione", "label_fr":"Oxydation",
      "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы и ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo.", "de":"⚠️ Oxidation/Rost an Kontakten.", "it":"⚠️ Ossidazione/ruggine sui contatti.", "fr":"⚠️ Oxydation/rouille sur les contacts."},
-     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12", "de":"IEC 60204-1, NEC 110.12", "it":"IEC 60204-1, NEC 110.12", "fr":"IEC 60204-1, NEC 110.12"},
-     "normative_desc":{"en":"Electrical equipment — protection against corrosion.", "de":"Elektrische Ausrüstung — Schutz gegen Korrosion.", "it":"Apparecchiature elettriche — protezione contro la corrosione.", "fr":"Équipements électriques — protection contre la corrosion."}},
+     "normative":{"en":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "sw":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "de":"DIN VDE 0100-520 §522.6, DIN EN 60204-1", "it":"CEI 64-8/5 Art. 522, CEI EN 60204-1", "fr":"NF C 15-100 Art. 522, NF EN 60204-1"},
+     "normative_desc":{"en":"Protection against corrosion and external influences.", "de":"Schutz gegen Korrosion und äußere Einflüsse.", "it":"Protezione contro la corrosione e influenze esterne.", "fr":"Protection contre la corrosion et les influences externes."}},
 
     {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro", "label_de":"Schaltplan", "label_it":"Schema", "label_fr":"Schéma",
      "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo.", "de":"⚠️ Einpoliger Schaltplan fehlt.", "it":"⚠️ Schema unifilare mancante.", "fr":"⚠️ Schéma unifilaire manquant."},
-     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22", "de":"IEC 61082-1, NEC 110.22", "it":"IEC 61082-1, NEC 110.22", "fr":"IEC 61082-1, NEC 110.22"},
-     "normative_desc":{"en":"Preparation of documents used in electrotechnology.", "de":"Erstellung von Dokumenten in der Elektrotechnik.", "it":"Preparazione di documenti utilizzati in elettrotecnica.", "fr":"Préparation de documents utilisés en électrotechnique."}}
+     "normative":{"en":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "sw":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "de":"DIN VDE 0100-100 §514.5, DIN EN 61082-1", "it":"CEI 64-8 Art. 514.5, CEI EN 61082-1", "fr":"NF C 15-100 Art. 514.5, NF EN 61082-1"},
+     "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
 ]
 
 def init_db():
@@ -788,5 +788,5 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (7 languages + extended standards).")
+    print("🚀 Bot started (7 languages + EU standards).")
     app.run_polling()
