@@ -279,22 +279,33 @@ T = {
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi", "label_de":"Kennzeichnungen", "label_it":"Etichette", "label_fr":"Étiquettes",
      "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo.", "de":"⚠️ Fehlende Kennzeichnungen an Kabeln/Geräten.", "it":"⚠️ Etichette mancanti su cavi/apparecchiature.", "fr":"⚠️ Étiquettes manquantes sur les câbles/équipements."},
-     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9", "de":"IEC 60445, NEC 110.22, BS 7671 514.9", "it":"IEC 60445, NEC 110.22, BS 7671 514.9", "fr":"IEC 60445, NEC 110.22, BS 7671 514.9"}},
+     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9", "de":"IEC 60445, NEC 110.22, BS 7671 514.9", "it":"IEC 60445, NEC 110.22, BS 7671 514.9", "fr":"IEC 60445, NEC 110.22, BS 7671 514.9"},
+     "normative_desc":{"en":"Identification of conductors and equipment.", "de":"Kennzeichnung von Leitern und Betriebsmitteln.", "it":"Identificazione di conduttori e apparecchiature.", "fr":"Identification des conducteurs et des équipements."}},
+
     {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo", "label_de":"Durchdringungen", "label_it":"Passaggi", "label_fr":"Traversées",
      "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri.", "de":"⚠️ Spalten in Durchdringungen nicht abgedichtet.", "it":"⚠️ Fessure nei passaggi non sigillate.", "fr":"⚠️ Interstices dans les traversées non scellés."},
-     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "de":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "it":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "fr":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}},
+     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "de":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "it":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "fr":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"},
+     "normative_desc":{"en":"Sealing of cable and pipe penetrations.", "de":"Abdichtung von Kabel- und Rohrdurchführungen.", "it":"Sigillatura dei passaggi di cavi e tubi.", "fr":"Scellement des traversées de câbles et de tuyaux."}},
+
     {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza", "label_de":"Erdung", "label_it":"Messa a terra", "label_fr":"Mise à la terre",
      "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa.", "de":"⚠️ Erdung nicht vorhanden.", "it":"⚠️ Messa a terra non fornita.", "fr":"⚠️ Mise à la terre non réalisée."},
-     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "de":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "it":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "fr":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}},
+     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "de":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "it":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "fr":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"},
+     "normative_desc":{"en":"Protection against electric shock — earthing and bonding.", "de":"Schutz gegen elektrischen Schlag — Erdung und Potentialausgleich.", "it":"Protezione contro le scosse elettriche — messa a terra e equipotenziale.", "fr":"Protection contre les chocs électriques — mise à la terre et liaison équipotentielle."}},
+
     {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti", "label_de":"Gewindebolzen", "label_it":"Perni", "label_fr":"Goujons",
      "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa.", "de":"⚠️ Gewindebolzen der Kabeltrasse nicht abgeschnitten.", "it":"⚠️ Perni della canalina non tagliati.", "fr":"⚠️ Goujons du chemin de câbles non coupés."},
-     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8", "de":"IEC 61537, NEC 392.18, BS 7671 522.8", "it":"IEC 61537, NEC 392.18, BS 7671 522.8", "fr":"IEC 61537, NEC 392.18, BS 7671 522.8"}},
+     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8", "de":"IEC 61537, NEC 392.18, BS 7671 522.8", "it":"IEC 61537, NEC 392.18, BS 7671 522.8", "fr":"IEC 61537, NEC 392.18, BS 7671 522.8"},
+     "normative_desc":{"en":"Cable tray systems — safe installation requirements.", "de":"Kabeltrassensysteme — sichere Installationsanforderungen.", "it":"Sistemi di canalina portacavi — requisiti di installazione sicura.", "fr":"Systèmes de chemins de câbles — exigences d'installation sûre."}},
+
     {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu", "label_de":"Oxidation", "label_it":"Ossidazione", "label_fr":"Oxydation",
      "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы и ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo.", "de":"⚠️ Oxidation/Rost an Kontakten.", "it":"⚠️ Ossidazione/ruggine sui contatti.", "fr":"⚠️ Oxydation/rouille sur les contacts."},
-     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12", "de":"IEC 60204-1, NEC 110.12", "it":"IEC 60204-1, NEC 110.12", "fr":"IEC 60204-1, NEC 110.12"}},
+     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12", "de":"IEC 60204-1, NEC 110.12", "it":"IEC 60204-1, NEC 110.12", "fr":"IEC 60204-1, NEC 110.12"},
+     "normative_desc":{"en":"Electrical equipment — protection against corrosion.", "de":"Elektrische Ausrüstung — Schutz gegen Korrosion.", "it":"Apparecchiature elettriche — protezione contro la corrosione.", "fr":"Équipements électriques — protection contre la corrosion."}},
+
     {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro", "label_de":"Schaltplan", "label_it":"Schema", "label_fr":"Schéma",
      "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo.", "de":"⚠️ Einpoliger Schaltplan fehlt.", "it":"⚠️ Schema unifilare mancante.", "fr":"⚠️ Schéma unifilaire manquant."},
-     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22", "de":"IEC 61082-1, NEC 110.22", "it":"IEC 61082-1, NEC 110.22", "fr":"IEC 61082-1, NEC 110.22"}}
+     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22", "de":"IEC 61082-1, NEC 110.22", "it":"IEC 61082-1, NEC 110.22", "fr":"IEC 61082-1, NEC 110.22"},
+     "normative_desc":{"en":"Preparation of documents used in electrotechnology.", "de":"Erstellung von Dokumenten in der Elektrotechnik.", "it":"Preparazione di documenti utilizzati in elettrotecnica.", "fr":"Préparation de documents utilisés en électrotechnique."}}
 ]
 
 def init_db():
@@ -468,7 +479,8 @@ def get_category_info(filename, lang):
             return {
                 "text": cat["text"].get(lang, cat["text"]["en"]),
                 "etalon_prefix": cat["etalon_prefix"],
-                "normative": cat["normative"].get(lang, cat["normative"]["en"])
+                "normative": cat["normative"].get(lang, cat["normative"]["en"]),
+                "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))
             }
     parts = name.split('_')
     for cat in CATEGORIES:
@@ -476,12 +488,14 @@ def get_category_info(filename, lang):
             return {
                 "text": cat["text"].get(lang, cat["text"]["en"]),
                 "etalon_prefix": cat["etalon_prefix"],
-                "normative": cat["normative"].get(lang, cat["normative"]["en"])
+                "normative": cat["normative"].get(lang, cat["normative"]["en"]),
+                "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))
             }
     return {
         "text": f"Unknown defect (file: {name})" if lang=="en" else f"Desconocido (archivo: {name})" if lang=="es" else f"Неизвестное замечание (файл: {name})" if lang=="ru" else f"Kasoro isiyojulikana (faili: {name})" if lang=="sw" else f"Unbekannter Mangel (Datei: {name})" if lang=="de" else f"Difetto sconosciuto (file: {name})" if lang=="it" else f"Défaut inconnu (fichier : {name})",
         "etalon_prefix": None,
-        "normative": None
+        "normative": None,
+        "normative_desc": ""
     }
 
 def find_etalon(prefix):
@@ -527,6 +541,8 @@ def generate_pdf_report(report_data, lang):
             story.append(Paragraph(f"<b>{t['defect']} #{i}</b>", styles['Heading2']))
             story.append(Paragraph(f"📌 {item.get('text', '')}", styles['Normal']))
             story.append(Paragraph(f"{t['standard_label']} {item.get('normative', '—')}", styles['Normal']))
+            if item.get('normative_desc'):
+                story.append(Paragraph(f"📖 {item['normative_desc']}", styles['Normal']))
             story.append(Paragraph(t['report_action'], styles['Normal']))
             story.append(Spacer(1, 4*mm))
         if photo_path and os.path.exists(photo_path):
@@ -603,10 +619,13 @@ async def handle_photo(update, context):
         response += f"{i}. {d['text']}\n"
         if d.get('normative'):
             response += f"   {t['standard']} {d['normative']}\n"
+        if d.get('normative_desc'):
+            response += f"   📖 {d['normative_desc']}\n"
 
     report_data = [{
         'text': d['text'],
         'normative': d.get('normative'),
+        'normative_desc': d.get('normative_desc', ''),
         'photo_path': review_path
     } for d in unique]
     save_session(user_id, report_data)
@@ -769,5 +788,5 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (GitHub + Swahili + German + Italian + French ready).")
+    print("🚀 Bot started (7 languages + extended standards).")
     app.run_polling()
