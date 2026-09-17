@@ -36,9 +36,7 @@ MODEL_PATH = "best.pt"
 OWNER_ID = 8743362338
 
 FREE_CHECKS_LIMIT = 5
-PRICE_10_CHECKS = 50
-PRICE_MONTH = 200
-USDC_WALLET = "ECHv1ym6h9AEq9tDfvSdvcCJiTGAjK5oGdzsBovBwbvS"
+USDT_WALLET = "TZ4bfpNTvMdMNRzQJt817pVjF3nEGtCKSH"
 
 T = {
     "en": {
@@ -58,10 +56,6 @@ T = {
         "report_action": "🛠 Recommended action: bring into compliance with standards.",
         "defects_list": "🔍 Found defects:",
         "generate_order": "📄 Generate order",
-        "classify_prompt": "📸 Classify this photo:",
-        "classify_success": "✅ Photo added to {category}",
-        "classify_skipped": "⏭️ Skipped",
-        "classify_rejected": "❌ Rejected and deleted",
         "order_title": "ORDER",
         "issue_date": "Issue date:",
         "defect": "Defect",
@@ -78,12 +72,10 @@ T = {
         "free_checks_used": "⚠️ Free checks used up.",
         "buy_button": "💳 Buy checks",
         "buy_title": "💳 Buy more checks",
-        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $5 (50 USDC)\n• Unlimited (1 month) — $20 (200 USDC)\n\nSend USDC (Solana) to:\n`{wallet}`\n\nAfter payment, message @Sergijus_incorporated and we'll activate your access.",
+        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $5 (5 USDT)\n• Unlimited (1 month) — $20 (20 USDT)\n\nSend USDT (TRC20) to:\n`{wallet}`\n\nAfter payment, message @Sergijus_incorporated and we'll activate your access.",
         "pay_sent": "✅ I've sent payment",
         "balance_title": "📊 Your balance",
-        "balance_text": "Free checks left: {free}\nPaid checks left: {paid}",
-        "admin_added": "✅ Added {count} checks to user {user_id}.",
-        "admin_usage": "Usage: /addchecks <user_id> <count>"
+        "balance_text": "Free checks left: {free}\nPaid checks left: {paid}"
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -102,10 +94,6 @@ T = {
         "report_action": "🛠 Привести в соответствие с НТД.",
         "defects_list": "🔍 Найдены замечания:",
         "generate_order": "📄 Сформировать предписание",
-        "classify_prompt": "📸 Классифицируйте это фото:",
-        "classify_success": "✅ Фото добавлено в {category}",
-        "classify_skipped": "⏭️ Пропущено",
-        "classify_rejected": "❌ Отклонено",
         "order_title": "ПРЕДПИСАНИЕ",
         "issue_date": "Дата выдачи:",
         "defect": "Замечание",
@@ -122,12 +110,10 @@ T = {
         "free_checks_used": "⚠️ Бесплатные проверки закончились.",
         "buy_button": "💳 Купить проверки",
         "buy_title": "💳 Купить проверки",
-        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $5 (50 USDC)\n• Безлимит (1 месяц) — $20 (200 USDC)\n\nОтправьте USDC (Solana) на:\n`{wallet}`\n\nПосле оплаты напишите @Sergijus_incorporated — мы активируем доступ.",
+        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $5 (5 USDT)\n• Безлимит (1 месяц) — $20 (20 USDT)\n\nОтправьте USDT (TRC20) на:\n`{wallet}`\n\nПосле оплаты напишите @Sergijus_incorporated — мы активируем доступ.",
         "pay_sent": "✅ Я отправил оплату",
         "balance_title": "📊 Ваш баланс",
-        "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}",
-        "admin_added": "✅ Добавлено {count} проверок пользователю {user_id}.",
-        "admin_usage": "Использование: /addchecks <user_id> <count>"
+        "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}"
     },
     "de": {
         "welcome": "Hallo! 👋\nIch bin ein technischer Inspektionsbot. Senden Sie mir ein Foto einer elektrischen Anlage, und ich finde mögliche Verstöße.\n\nSenden Sie einfach ein Foto!",
@@ -146,10 +132,6 @@ T = {
         "report_action": "🛠 Empfohlene Maßnahme: In Übereinstimmung mit den Normen bringen.",
         "defects_list": "🔍 Gefundene Mängel:",
         "generate_order": "📄 Anordnung erstellen",
-        "classify_prompt": "📸 Klassifizieren Sie dieses Foto:",
-        "classify_success": "✅ Foto zu {category} hinzugefügt",
-        "classify_skipped": "⏭️ Übersprungen",
-        "classify_rejected": "❌ Abgelehnt und gelöscht",
         "order_title": "ANORDNUNG",
         "issue_date": "Ausstellungsdatum:",
         "defect": "Mangel",
@@ -166,12 +148,10 @@ T = {
         "free_checks_used": "⚠️ Kostenlose Prüfungen aufgebraucht.",
         "buy_button": "💳 Prüfungen kaufen",
         "buy_title": "💳 Mehr Prüfungen kaufen",
-        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 5 $ (50 USDC)\n• Unbegrenzt (1 Monat) — 20 $ (200 USDC)\n\nSenden Sie USDC (Solana) an:\n`{wallet}`\n\nNach der Zahlung schreiben Sie @Sergijus_incorporated — wir aktivieren Ihren Zugang.",
+        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 5 $ (5 USDT)\n• Unbegrenzt (1 Monat) — 20 $ (20 USDT)\n\nSenden Sie USDT (TRC20) an:\n`{wallet}`\n\nNach der Zahlung schreiben Sie @Sergijus_incorporated — wir aktivieren Ihren Zugang.",
         "pay_sent": "✅ Ich habe bezahlt",
         "balance_title": "📊 Ihr Guthaben",
-        "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}",
-        "admin_added": "✅ {count} Prüfungen für Nutzer {user_id} hinzugefügt.",
-        "admin_usage": "Verwendung: /addchecks <user_id> <count>"
+        "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}"
     },
     "it": {
         "welcome": "Ciao! 👋\nSono un bot di ispezione tecnica. Inviami una foto di un impianto elettrico e troverò possibili violazioni.\n\nInvia semplicemente una foto!",
@@ -190,10 +170,6 @@ T = {
         "report_action": "🛠 Azione raccomandata: mettere in conformità con le norme.",
         "defects_list": "🔍 Difetti trovati:",
         "generate_order": "📄 Genera ordine",
-        "classify_prompt": "📸 Classifica questa foto:",
-        "classify_success": "✅ Foto aggiunta a {category}",
-        "classify_skipped": "⏭️ Saltata",
-        "classify_rejected": "❌ Rifiutata ed eliminata",
         "order_title": "ORDINE",
         "issue_date": "Data di emissione:",
         "defect": "Difetto",
@@ -210,12 +186,10 @@ T = {
         "free_checks_used": "⚠️ Controlli gratuiti esauriti.",
         "buy_button": "💳 Acquista controlli",
         "buy_title": "💳 Acquista più controlli",
-        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 5 $ (50 USDC)\n• Illimitato (1 mese) — 20 $ (200 USDC)\n\nInvia USDC (Solana) a:\n`{wallet}`\n\nDopo il pagamento, scrivi a @Sergijus_incorporated — attiveremo il tuo accesso.",
+        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 5 $ (5 USDT)\n• Illimitato (1 mese) — 20 $ (20 USDT)\n\nInvia USDT (TRC20) a:\n`{wallet}`\n\nDopo il pagamento, scrivi a @Sergijus_incorporated — attiveremo il tuo accesso.",
         "pay_sent": "✅ Ho inviato il pagamento",
         "balance_title": "📊 Il tuo saldo",
-        "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}",
-        "admin_added": "✅ Aggiunti {count} controlli all'utente {user_id}.",
-        "admin_usage": "Uso: /addchecks <user_id> <count>"
+        "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}"
     },
     "fr": {
         "welcome": "Bonjour ! 👋\nJe suis un bot d'inspection technique. Envoyez-moi une photo d'une installation électrique et je trouverai les violations possibles.\n\nEnvoyez simplement une photo !",
@@ -234,10 +208,6 @@ T = {
         "report_action": "🛠 Action recommandée : mettre en conformité avec les normes.",
         "defects_list": "🔍 Défauts trouvés :",
         "generate_order": "📄 Générer l'ordre",
-        "classify_prompt": "📸 Classifiez cette photo :",
-        "classify_success": "✅ Photo ajoutée à {category}",
-        "classify_skipped": "⏭️ Ignorée",
-        "classify_rejected": "❌ Rejetée et supprimée",
         "order_title": "ORDRE",
         "issue_date": "Date d'émission :",
         "defect": "Défaut",
@@ -254,12 +224,10 @@ T = {
         "free_checks_used": "⚠️ Vérifications gratuites épuisées.",
         "buy_button": "💳 Acheter des vérifications",
         "buy_title": "💳 Acheter plus de vérifications",
-        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 5 $ (50 USDC)\n• Illimité (1 mois) — 20 $ (200 USDC)\n\nEnvoyez USDC (Solana) à :\n`{wallet}`\n\nAprès paiement, écrivez à @Sergijus_incorporated — nous activerons votre accès.",
+        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 5 $ (5 USDT)\n• Illimité (1 mois) — 20 $ (20 USDT)\n\nEnvoyez USDT (TRC20) à :\n`{wallet}`\n\nAprès paiement, écrivez à @Sergijus_incorporated — nous activerons votre accès.",
         "pay_sent": "✅ J'ai envoyé le paiement",
         "balance_title": "📊 Votre solde",
-        "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}",
-        "admin_added": "✅ {count} vérifications ajoutées à l'utilisateur {user_id}.",
-        "admin_usage": "Utilisation : /addchecks <user_id> <count>"
+        "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}"
     }
 }
 
@@ -267,32 +235,32 @@ CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi", "label_de":"Kennzeichnungen", "label_it":"Etichette", "label_fr":"Étiquettes",
      "text":{"en":"Missing cable/equipment labels.", "ru":"Отсутствуют бирки на оборудовании.", "es":"Faltan etiquetas en cables/equipos.", "sw":"Lebsi za nyaya/vifaa hazipo.", "de":"Fehlende Kennzeichnungen an Kabeln/Geräten.", "it":"Etichette mancanti su cavi/apparecchiature.", "fr":"Étiquettes manquantes sur les câbles/équipements."},
      "normative":{"en":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "sw":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "de":"DIN VDE 0100-520:2023-04 §514.3, DIN EN 60445", "it":"CEI 64-8/5 Art. 514.3, CEI EN 60445", "fr":"NF C 15-100 Art. 514.3, NF EN 60445"},
-     "normative_desc":{"en":"Identification of conductors and equipment.", "de":"Kennzeichnung von Leitern und Betriebsmitteln.", "it":"Identificazione di conduttori e apparecchiature.", "fr":"Identification des conducteurs et des équipements."}},
+     "normative_desc":{"en":"Identification of conductors and equipment.", "ru":"Идентификация проводников и оборудования.", "de":"Kennzeichnung von Leitern und Betriebsmitteln.", "it":"Identificazione di conduttori e apparecchiature.", "fr":"Identification des conducteurs et des équipements."}},
 
     {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo", "label_de":"Durchdringungen", "label_it":"Passaggi", "label_fr":"Traversées",
      "text":{"en":"Gaps in penetrations not sealed.", "ru":"Не выполнена заделка проходок.", "es":"Brechas en penetraciones sin sellar.", "sw":"Mipenyo haijafungwa vizuri.", "de":"Spalten in Durchdringungen nicht abgedichtet.", "it":"Fessure nei passaggi non sigillate.", "fr":"Interstices dans les traversées non scellés."},
      "normative":{"en":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "sw":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "de":"DIN VDE 0100-520:2023-04 §527.2, DIN 4102-12, MLAR §5", "it":"CEI 64-8/5 Art. 527.2, CEI 64-8/5 Art. 527.2.1", "fr":"NF C 15-100 Art. 527.2, NF C 15-100 Art. 527.2.1"},
-     "normative_desc":{"en":"Fire sealing of cable and pipe penetrations.", "de":"Brandschutz bei Kabel- und Rohrdurchführungen.", "it":"Protezione contro la propagazione del fuoco nei passaggi.", "fr":"Protection contre la propagation du feu dans les traversées."}},
+     "normative_desc":{"en":"Fire sealing of cable and pipe penetrations.", "ru":"Огнезащита кабельных и трубных проходок.", "de":"Brandschutz bei Kabel- und Rohrdurchführungen.", "it":"Protezione contro la propagazione del fuoco nei passaggi.", "fr":"Protection contre la propagation du feu dans les traversées."}},
 
     {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza", "label_de":"Erdung", "label_it":"Messa a terra", "label_fr":"Mise à la terre",
      "text":{"en":"Earthing not provided.", "ru":"Не выполнено заземление.", "es":"No se proporciona puesta a tierra.", "sw":"Kutuliza haijafanywa.", "de":"Erdung nicht vorhanden.", "it":"Messa a terra non fornita.", "fr":"Mise à la terre non réalisée."},
      "normative":{"en":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "sw":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "de":"DIN VDE 0100-540:2024-06 §542, §543, DIN VDE 0100-410 §411.3", "it":"CEI 64-8/54 Art. 542, Art. 543, CEI 64-8/41 Art. 411.3", "fr":"NF C 15-100 Art. 542, Art. 543, Art. 411.3"},
-     "normative_desc":{"en":"Earthing arrangements and protective conductors.", "de":"Erdungsanlagen und Schutzleiter.", "it":"Impianti di terra e conduttori di protezione.", "fr":"Installations de mise à la terre et conducteurs de protection."}},
+     "normative_desc":{"en":"Earthing arrangements and protective conductors.", "ru":"Заземляющие устройства и защитные проводники.", "de":"Erdungsanlagen und Schutzleiter.", "it":"Impianti di terra e conduttori di protezione.", "fr":"Installations de mise à la terre et conducteurs de protection."}},
 
     {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti", "label_de":"Gewindebolzen", "label_it":"Perni", "label_fr":"Goujons",
      "text":{"en":"Cable tray studs not trimmed.", "ru":"Шпильки лотка не срезаны.", "es":"Espárragos de bandeja no recortados.", "sw":"Boliti za trei za nyaya hazijakatwa.", "de":"Gewindebolzen der Kabeltrasse nicht abgeschnitten.", "it":"Perni della canalina non tagliati.", "fr":"Goujons du chemin de câbles non coupés."},
      "normative":{"en":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "sw":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "de":"DIN VDE 0100-520 §522.8, DIN EN 61537", "it":"CEI 64-8/5 Art. 522.8, CEI EN 61537", "fr":"NF C 15-100 Art. 522.8, NF EN 61537"},
-     "normative_desc":{"en":"Cable tray systems — mechanical protection.", "de":"Kabeltrassensysteme — Schutz gegen mechanische Beschädigung.", "it":"Sistemi di canalina — protezione meccanica.", "fr":"Systèmes de chemins de câbles — protection mécanique."}},
+     "normative_desc":{"en":"Cable tray systems — mechanical protection.", "ru":"Кабельные лотки — защита от механических повреждений.", "de":"Kabeltrassensysteme — Schutz gegen mechanische Beschädigung.", "it":"Sistemi di canalina — protezione meccanica.", "fr":"Systèmes de chemins de câbles — protection mécanique."}},
 
     {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu", "label_de":"Oxidation", "label_it":"Ossidazione", "label_fr":"Oxydation",
      "text":{"en":"Oxidation/rust on contacts.", "ru":"Окислы и ржавчина на контактах.", "es":"Oxidación/óxido en contactos.", "sw":"Oksidi/kutu kwenye viungo.", "de":"Oxidation/Rost an Kontakten.", "it":"Ossidazione/ruggine sui contatti.", "fr":"Oxydation/rouille sur les contacts."},
      "normative":{"en":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "sw":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "de":"DIN VDE 0100-520 §522.6, DIN EN 60204-1", "it":"CEI 64-8/5 Art. 522, CEI EN 60204-1", "fr":"NF C 15-100 Art. 522, NF EN 60204-1"},
-     "normative_desc":{"en":"Protection against corrosion and external influences.", "de":"Schutz gegen Korrosion und äußere Einflüsse.", "it":"Protezione contro la corrosione e influenze esterne.", "fr":"Protection contre la corrosion et les influences externes."}},
+     "normative_desc":{"en":"Protection against corrosion and external influences.", "ru":"Защита от коррозии и внешних воздействий.", "de":"Schutz gegen Korrosion und äußere Einflüsse.", "it":"Protezione contro la corrosione e influenze esterne.", "fr":"Protection contre la corrosion et les influences externes."}},
 
     {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro", "label_de":"Schaltplan", "label_it":"Schema", "label_fr":"Schéma",
      "text":{"en":"Single-line diagram missing.", "ru":"Отсутствует однолинейная схема.", "es":"Falta el diagrama unifilar.", "sw":"Mchoro wa mstari mmoja haupo.", "de":"Einpoliger Schaltplan fehlt.", "it":"Schema unifilare mancante.", "fr":"Schéma unifilaire manquant."},
      "normative":{"en":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "sw":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "de":"DIN VDE 0100-100 §514.5, DIN EN 61082-1", "it":"CEI 64-8 Art. 514.5, CEI EN 61082-1", "fr":"NF C 15-100 Art. 514.5, NF EN 61082-1"},
-     "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
+     "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "ru":"Документация и оформление электротехнических документов.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
 ]
 
 def init_db():
@@ -606,7 +574,7 @@ async def handle_photo(update, context):
     free, paid = get_balance(user_id)
     if free <= 0 and paid <= 0:
         await update.message.reply_text(
-            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDC_WALLET),
+            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDT_WALLET),
             reply_markup=get_buy_keyboard(lang)
         )
         return
@@ -658,7 +626,8 @@ async def handle_photo(update, context):
         if d.get('normative_desc'):
             response += f"   → {d['normative_desc']}\n"
 
-    response += f"\n{t['free_checks_left'].format(count=free_left)}"
+    if free_left > 0:
+        response += f"\n{t['free_checks_left'].format(count=free_left)}"
 
     report_data = [{
         'text': d['text'],
@@ -691,7 +660,7 @@ async def button_callback(update, context):
 
     if data == "buy_checks":
         await query.message.reply_text(
-            t['buy_text'].format(wallet=USDC_WALLET),
+            t['buy_text'].format(wallet=USDT_WALLET),
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton(t['pay_sent'], callback_data="pay_sent")]
             ])
