@@ -42,9 +42,7 @@ USDT_WALLET = "TZ4bfpNTvMdMNRzQJt817pVjF3nEGtCKSH"
 USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 TRONGRID_API = "https://api.trongrid.io/v1/accounts/{address}/transactions/trc20"
 
-# ========== ПЛАТЕЖИ (автоматическая проверка) ==========
 def get_recent_transactions(limit=20):
-    """Получить последние входящие транзакции USDT на кошелёк"""
     try:
         url = TRONGRID_API.format(address=USDT_WALLET)
         params = {
@@ -55,14 +53,12 @@ def get_recent_transactions(limit=20):
         }
         r = requests.get(url, params=params, timeout=15)
         if r.status_code == 200:
-            data = r.json()
-            return data.get("data", [])
+            return r.json().get("data", [])
     except Exception as e:
         print(f"TronGrid error: {e}")
     return []
 
 def check_payment(txid, expected_amount, user_id):
-    """Проверить транзакцию по TXID"""
     txid = txid.strip().lower()
     if not txid.startswith("0x"):
         txid = "0x" + txid
@@ -88,8 +84,7 @@ def check_payment(txid, expected_amount, user_id):
         print(f"Tx check error: {e}")
     return None
 
-def check_payment_by_user(user_id, expected_amount, since_minutes=60):
-    """Проверить последние транзакции на кошелёк для конкретного пользователя"""
+def check_payment_by_user(user_id, expected_amount, since_minutes=120):
     txs = get_recent_transactions()
     now = time.time() * 1000
     since = now - (since_minutes * 60 * 1000)
@@ -108,7 +103,6 @@ def check_payment_by_user(user_id, expected_amount, since_minutes=60):
             return tx.get("transaction_id"), amount
     return None, 0
 
-# ========== ЯЗЫКИ ==========
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -135,7 +129,7 @@ T = {
         "free_checks_left": "✅ You have {count} free checks left.",
         "free_checks_used": "⚠️ Free checks used up.",
         "buy_button": "💳 Buy checks",
-        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $5 (5 USDT)\n• Unlimited (1 month) — $20 (20 USDT)\n\nSend USDT (TRC20) to:\n`{wallet}`\n\nAfter payment, press the button below.",
+        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $10 (10 USDT)\n• Unlimited (1 month) — $20 (20 USDT)\n\nSend USDT (TRC20) to:\n`{wallet}`\n\nAfter payment, press the button below.",
         "pay_sent": "✅ I've sent payment",
         "pay_check": "🔍 Checking payment...",
         "pay_success": "✅ Payment confirmed! {count} checks added to your account.",
@@ -168,7 +162,7 @@ T = {
         "free_checks_left": "✅ У вас осталось {count} бесплатных проверок.",
         "free_checks_used": "⚠️ Бесплатные проверки закончились.",
         "buy_button": "💳 Купить проверки",
-        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $5 (5 USDT)\n• Безлимит (1 месяц) — $20 (20 USDT)\n\nОтправьте USDT (TRC20) на:\n`{wallet}`\n\nПосле оплаты нажмите кнопку ниже.",
+        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $10 (10 USDT)\n• Безлимит (1 месяц) — $20 (20 USDT)\n\nОтправьте USDT (TRC20) на:\n`{wallet}`\n\nПосле оплаты нажмите кнопку ниже.",
         "pay_sent": "✅ Я отправил оплату",
         "pay_check": "🔍 Проверяю оплату...",
         "pay_success": "✅ Оплата подтверждена! {count} проверок добавлено на ваш аккаунт.",
@@ -201,7 +195,7 @@ T = {
         "free_checks_left": "✅ Sie haben noch {count} kostenlose Prüfungen.",
         "free_checks_used": "⚠️ Kostenlose Prüfungen aufgebraucht.",
         "buy_button": "💳 Prüfungen kaufen",
-        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 5 $ (5 USDT)\n• Unbegrenzt (1 Monat) — 20 $ (20 USDT)\n\nSenden Sie USDT (TRC20) an:\n`{wallet}`\n\nNach der Zahlung drücken Sie die Taste unten.",
+        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 10 $ (10 USDT)\n• Unbegrenzt (1 Monat) — 20 $ (20 USDT)\n\nSenden Sie USDT (TRC20) an:\n`{wallet}`\n\nNach der Zahlung drücken Sie die Taste unten.",
         "pay_sent": "✅ Ich habe bezahlt",
         "pay_check": "🔍 Zahlung wird geprüft...",
         "pay_success": "✅ Zahlung bestätigt! {count} Prüfungen zu Ihrem Konto hinzugefügt.",
@@ -234,7 +228,7 @@ T = {
         "free_checks_left": "✅ Hai ancora {count} controlli gratuiti.",
         "free_checks_used": "⚠️ Controlli gratuiti esauriti.",
         "buy_button": "💳 Acquista controlli",
-        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 5 $ (5 USDT)\n• Illimitato (1 mese) — 20 $ (20 USDT)\n\nInvia USDT (TRC20) a:\n`{wallet}`\n\nDopo il pagamento, premi il pulsante sotto.",
+        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 10 $ (10 USDT)\n• Illimitato (1 mese) — 20 $ (20 USDT)\n\nInvia USDT (TRC20) a:\n`{wallet}`\n\nDopo il pagamento, premi il pulsante sotto.",
         "pay_sent": "✅ Ho inviato il pagamento",
         "pay_check": "🔍 Verifica del pagamento...",
         "pay_success": "✅ Pagamento confermato! {count} controlli aggiunti al tuo account.",
@@ -267,7 +261,7 @@ T = {
         "free_checks_left": "✅ Il vous reste {count} vérifications gratuites.",
         "free_checks_used": "⚠️ Vérifications gratuites épuisées.",
         "buy_button": "💳 Acheter des vérifications",
-        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 5 $ (5 USDT)\n• Illimité (1 mois) — 20 $ (20 USDT)\n\nEnvoyez USDT (TRC20) à :\n`{wallet}`\n\nAprès paiement, appuyez sur le bouton ci-dessous.",
+        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 10 $ (10 USDT)\n• Illimité (1 mois) — 20 $ (20 USDT)\n\nEnvoyez USDT (TRC20) à :\n`{wallet}`\n\nAprès paiement, appuyez sur le bouton ci-dessous.",
         "pay_sent": "✅ J'ai envoyé le paiement",
         "pay_check": "🔍 Vérification du paiement...",
         "pay_success": "✅ Paiement confirmé ! {count} vérifications ajoutées à votre compte.",
@@ -319,7 +313,7 @@ def init_db():
         PRIMARY KEY (user_id)
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS pending_payments (
-        user_id INTEGER, txid TEXT, amount REAL, created_at TEXT,
+        user_id INTEGER, amount REAL, created_at TEXT,
         PRIMARY KEY (user_id)
     )''')
     conn.commit()
@@ -371,12 +365,6 @@ def save_pending(user_id, amount):
     conn = sqlite3.connect("users.db")
     conn.execute("INSERT OR REPLACE INTO pending_payments (user_id, amount, created_at) VALUES (?, ?, ?)", (user_id, amount, dt.datetime.now().isoformat()))
     conn.commit(); conn.close()
-
-def get_pending(user_id):
-    conn = sqlite3.connect("users.db")
-    r = conn.execute("SELECT amount FROM pending_payments WHERE user_id = ?", (user_id,)).fetchone()
-    conn.close()
-    return r[0] if r else None
 
 def clear_pending(user_id):
     conn = sqlite3.connect("users.db")
@@ -627,7 +615,6 @@ async def handle_photo(update, context):
         await update.message.reply_text(response, reply_markup=keyboard)
 
 async def handle_txid(update, context):
-    """Обработка TXID от пользователя"""
     user_id = update.effective_user.id
     lang = get_lang(user_id)
     t = T[lang]
@@ -635,7 +622,7 @@ async def handle_txid(update, context):
     if not re.match(r'^[0-9a-fA-Fx]{64,}$', text):
         return
     await update.message.reply_text(t['pay_check'])
-    amount = check_payment(text, 5, user_id)
+    amount = check_payment(text, 10, user_id)
     if amount:
         add_paid_checks(user_id, 10)
         clear_pending(user_id)
@@ -661,8 +648,7 @@ async def button_callback(update, context):
 
     if data == "pay_sent":
         await query.message.reply_text(t['pay_check'])
-        # Ищем оплату автоматически
-        txid, amount = check_payment_by_user(user_id, 5, since_minutes=120)
+        txid, amount = check_payment_by_user(user_id, 10, since_minutes=180)
         if txid:
             add_paid_checks(user_id, 10)
             clear_pending(user_id)
@@ -744,5 +730,5 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_txid))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (AUTO payment via TronGrid).")
+    print("🚀 Bot started (AUTO payment, 10 USDT = 10 checks).")
     app.run_polling()
