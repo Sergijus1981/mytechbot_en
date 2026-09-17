@@ -278,32 +278,32 @@ T = {
 
 CATEGORIES = [
     {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi", "label_de":"Kennzeichnungen", "label_it":"Etichette", "label_fr":"Étiquettes",
-     "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo.", "de":"⚠️ Fehlende Kennzeichnungen an Kabeln/Geräten.", "it":"⚠️ Etichette mancanti su cavi/apparecchiature.", "fr":"⚠️ Étiquettes manquantes sur les câbles/équipements."},
+     "text":{"en":"Missing cable/equipment labels.", "ru":"Отсутствуют бирки на оборудовании.", "es":"Faltan etiquetas en cables/equipos.", "sw":"Lebsi za nyaya/vifaa hazipo.", "de":"Fehlende Kennzeichnungen an Kabeln/Geräten.", "it":"Etichette mancanti su cavi/apparecchiature.", "fr":"Étiquettes manquantes sur les câbles/équipements."},
      "normative":{"en":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "sw":"IEC 60445:2021 §6, HD 60364-5-52 §514.3", "de":"DIN VDE 0100-520:2023-04 §514.3, DIN EN 60445", "it":"CEI 64-8/5 Art. 514.3, CEI EN 60445", "fr":"NF C 15-100 Art. 514.3, NF EN 60445"},
      "normative_desc":{"en":"Identification of conductors and equipment.", "de":"Kennzeichnung von Leitern und Betriebsmitteln.", "it":"Identificazione di conduttori e apparecchiature.", "fr":"Identification des conducteurs et des équipements."}},
 
     {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo", "label_de":"Durchdringungen", "label_it":"Passaggi", "label_fr":"Traversées",
-     "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri.", "de":"⚠️ Spalten in Durchdringungen nicht abgedichtet.", "it":"⚠️ Fessure nei passaggi non sigillate.", "fr":"⚠️ Interstices dans les traversées non scellés."},
+     "text":{"en":"Gaps in penetrations not sealed.", "ru":"Не выполнена заделка проходок.", "es":"Brechas en penetraciones sin sellar.", "sw":"Mipenyo haijafungwa vizuri.", "de":"Spalten in Durchdringungen nicht abgedichtet.", "it":"Fessure nei passaggi non sigillate.", "fr":"Interstices dans les traversées non scellés."},
      "normative":{"en":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "sw":"IEC 60364-5-52:2009 §527.2, HD 60364-5-52 §527.2", "de":"DIN VDE 0100-520:2023-04 §527.2, DIN 4102-12, MLAR §5", "it":"CEI 64-8/5 Art. 527.2, CEI 64-8/5 Art. 527.2.1", "fr":"NF C 15-100 Art. 527.2, NF C 15-100 Art. 527.2.1"},
      "normative_desc":{"en":"Fire sealing of cable and pipe penetrations.", "de":"Brandschutz bei Kabel- und Rohrdurchführungen.", "it":"Protezione contro la propagazione del fuoco nei passaggi.", "fr":"Protection contre la propagation du feu dans les traversées."}},
 
     {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza", "label_de":"Erdung", "label_it":"Messa a terra", "label_fr":"Mise à la terre",
-     "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa.", "de":"⚠️ Erdung nicht vorhanden.", "it":"⚠️ Messa a terra non fornita.", "fr":"⚠️ Mise à la terre non réalisée."},
+     "text":{"en":"Earthing not provided.", "ru":"Не выполнено заземление.", "es":"No se proporciona puesta a tierra.", "sw":"Kutuliza haijafanywa.", "de":"Erdung nicht vorhanden.", "it":"Messa a terra non fornita.", "fr":"Mise à la terre non réalisée."},
      "normative":{"en":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "sw":"IEC 60364-5-54:2021 §542, HD 60364-5-54:2022 §542", "de":"DIN VDE 0100-540:2024-06 §542, §543, DIN VDE 0100-410 §411.3", "it":"CEI 64-8/54 Art. 542, Art. 543, CEI 64-8/41 Art. 411.3", "fr":"NF C 15-100 Art. 542, Art. 543, Art. 411.3"},
      "normative_desc":{"en":"Earthing arrangements and protective conductors.", "de":"Erdungsanlagen und Schutzleiter.", "it":"Impianti di terra e conduttori di protezione.", "fr":"Installations de mise à la terre et conducteurs de protection."}},
 
     {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti", "label_de":"Gewindebolzen", "label_it":"Perni", "label_fr":"Goujons",
-     "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa.", "de":"⚠️ Gewindebolzen der Kabeltrasse nicht abgeschnitten.", "it":"⚠️ Perni della canalina non tagliati.", "fr":"⚠️ Goujons du chemin de câbles non coupés."},
+     "text":{"en":"Cable tray studs not trimmed.", "ru":"Шпильки лотка не срезаны.", "es":"Espárragos de bandeja no recortados.", "sw":"Boliti za trei za nyaya hazijakatwa.", "de":"Gewindebolzen der Kabeltrasse nicht abgeschnitten.", "it":"Perni della canalina non tagliati.", "fr":"Goujons du chemin de câbles non coupés."},
      "normative":{"en":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "sw":"IEC 61537:2020 §5, HD 60364-5-52 §522.8", "de":"DIN VDE 0100-520 §522.8, DIN EN 61537", "it":"CEI 64-8/5 Art. 522.8, CEI EN 61537", "fr":"NF C 15-100 Art. 522.8, NF EN 61537"},
      "normative_desc":{"en":"Cable tray systems — mechanical protection.", "de":"Kabeltrassensysteme — Schutz gegen mechanische Beschädigung.", "it":"Sistemi di canalina — protezione meccanica.", "fr":"Systèmes de chemins de câbles — protection mécanique."}},
 
     {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu", "label_de":"Oxidation", "label_it":"Ossidazione", "label_fr":"Oxydation",
-     "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы и ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo.", "de":"⚠️ Oxidation/Rost an Kontakten.", "it":"⚠️ Ossidazione/ruggine sui contatti.", "fr":"⚠️ Oxydation/rouille sur les contacts."},
+     "text":{"en":"Oxidation/rust on contacts.", "ru":"Окислы и ржавчина на контактах.", "es":"Oxidación/óxido en contactos.", "sw":"Oksidi/kutu kwenye viungo.", "de":"Oxidation/Rost an Kontakten.", "it":"Ossidazione/ruggine sui contatti.", "fr":"Oxydation/rouille sur les contacts."},
      "normative":{"en":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "sw":"IEC 60204-1:2016 §4.4, IEC 60364-5-52 §522", "de":"DIN VDE 0100-520 §522.6, DIN EN 60204-1", "it":"CEI 64-8/5 Art. 522, CEI EN 60204-1", "fr":"NF C 15-100 Art. 522, NF EN 60204-1"},
      "normative_desc":{"en":"Protection against corrosion and external influences.", "de":"Schutz gegen Korrosion und äußere Einflüsse.", "it":"Protezione contro la corrosione e influenze esterne.", "fr":"Protection contre la corrosion et les influences externes."}},
 
     {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro", "label_de":"Schaltplan", "label_it":"Schema", "label_fr":"Schéma",
-     "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo.", "de":"⚠️ Einpoliger Schaltplan fehlt.", "it":"⚠️ Schema unifilare mancante.", "fr":"⚠️ Schéma unifilaire manquant."},
+     "text":{"en":"Single-line diagram missing.", "ru":"Отсутствует однолинейная схема.", "es":"Falta el diagrama unifilar.", "sw":"Mchoro wa mstari mmoja haupo.", "de":"Einpoliger Schaltplan fehlt.", "it":"Schema unifilare mancante.", "fr":"Schéma unifilaire manquant."},
      "normative":{"en":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "sw":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "de":"DIN VDE 0100-100 §514.5, DIN EN 61082-1", "it":"CEI 64-8 Art. 514.5, CEI EN 61082-1", "fr":"NF C 15-100 Art. 514.5, NF EN 61082-1"},
      "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
 ]
@@ -539,7 +539,7 @@ def generate_pdf_report(report_data, lang):
         photo_path = report_data[0].get('photo_path') if report_data else None
         for i, item in enumerate(report_data, 1):
             story.append(Paragraph(f"<b>{t['defect']} #{i}</b>", styles['Heading2']))
-                       story.append(Paragraph(f"{item.get('text', '')}", styles['Normal']))
+            story.append(Paragraph(f"{item.get('text', '')}", styles['Normal']))
             story.append(Paragraph(f"{t['standard_label']} {item.get('normative', '—')}", styles['Normal']))
             if item.get('normative_desc'):
                 story.append(Paragraph(f"→ {item['normative_desc']}", styles['Normal']))
@@ -620,7 +620,7 @@ async def handle_photo(update, context):
         if d.get('normative'):
             response += f"   {t['standard']} {d['normative']}\n"
         if d.get('normative_desc'):
-            response += f"   📖 {d['normative_desc']}\n"
+            response += f"   → {d['normative_desc']}\n"
 
     report_data = [{
         'text': d['text'],
@@ -788,5 +788,5 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (7 languages + EU standards).")
+    print("🚀 Bot started (7 languages + EU standards, no emoji in PDF).")
     app.run_polling()
