@@ -25,8 +25,6 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.lib.fonts import addMapping
 
-import os
-
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 PHOTO_DB_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/photo_db.zip"
@@ -173,28 +171,62 @@ T = {
         "signature": "Sahihi: ___________________",
         "received_by": "ALIPOKEA:",
         "violation_photo": "Picha ya ukiukaji"
+    },
+    "de": {
+        "welcome": "Hallo! 👋\nIch bin ein technischer Inspektionsbot. Senden Sie mir ein Foto einer elektrischen Anlage, und ich finde mögliche Verstöße.\n\nSenden Sie einfach ein Foto!",
+        "language_set": "✅ Sprache auf Deutsch gesetzt.",
+        "defect_found": "🔍 **Mangel gefunden:**",
+        "standard": "📜 Norm:",
+        "no_match": "❌ Keine ähnlichen Beispiele gefunden.",
+        "report_ready": "📄 Ihre Anordnung ist fertig!",
+        "no_defects": "📭 Keine Mängel erfasst.",
+        "review_empty": "📭 Der Review-Ordner ist leer.",
+        "review_photos_found": "📸 {count} Fotos gefunden.",
+        "review_done": "✅ Alle Fotos gesendet.",
+        "stats": "📊 Bot-Statistik:\n👥 Nutzer insgesamt: {total}\n📈 Neu heute: {today}\n📅 Diese Woche: {week}",
+        "stats_unauthorized": "⛔ Nicht autorisiert.",
+        "choose_language": "🌐 Wählen Sie Ihre Sprache:",
+        "report_action": "🛠 Empfohlene Maßnahme: In Übereinstimmung mit den Normen bringen.",
+        "defects_list": "🔍 Gefundene Mängel:",
+        "generate_order": "📄 Anordnung erstellen",
+        "classify_prompt": "📸 Klassifizieren Sie dieses Foto:",
+        "classify_success": "✅ Foto zu {category} hinzugefügt",
+        "classify_skipped": "⏭️ Übersprungen",
+        "classify_rejected": "❌ Abgelehnt und gelöscht",
+        "order_title": "ANORDNUNG",
+        "issue_date": "Ausstellungsdatum:",
+        "defect": "Mangel",
+        "standard_label": "Norm:",
+        "deadline": "Frist zur Behebung: _______________",
+        "issued_by": "AUSGESTELLT VON:",
+        "company": "Unternehmen: ___________________",
+        "position": "Position: _________________",
+        "full_name": "Vollständiger Name: _______________________",
+        "signature": "Unterschrift: ___________________",
+        "received_by": "ERHALTEN VON:",
+        "violation_photo": "Foto des Verstoßes"
     }
 }
 
 CATEGORIES = [
-    {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi",
-     "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo."},
-     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9"}},
-    {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo",
-     "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri."},
-     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}},
-    {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza",
-     "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa."},
-     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}},
-    {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti",
-     "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa."},
-     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8"}},
-    {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu",
-     "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы y ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo."},
-     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12"}},
-    {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro",
-     "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo."},
-     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22"}}
+    {"keyword":"01_otsutstvuyut_birki", "etalon_prefix":"birki_etalon", "label_ru":"Бирки", "label_en":"Labels", "label_es":"Etiquetas", "label_sw":"Lebsi", "label_de":"Kennzeichnungen",
+     "text":{"en":"⚠️ Missing cable/equipment labels.", "ru":"⚠️ Отсутствуют бирки на оборудовании.", "es":"⚠️ Faltan etiquetas en cables/equipos.", "sw":"⚠️ Lebsi za nyaya/vifaa hazipo.", "de":"⚠️ Fehlende Kennzeichnungen an Kabeln/Geräten."},
+     "normative":{"en":"IEC 60445, NEC 110.22, BS 7671 514.9", "ru":"ПУЭ п. 2.3.23, СП 76.13330.2016 п. 6.4.8", "es":"IEC 60445, NEC 110.22, BS 7671 514.9", "sw":"IEC 60445, NEC 110.22, BS 7671 514.9", "de":"IEC 60445, NEC 110.22, BS 7671 514.9"}},
+    {"keyword":"02_zadelka_prohodok", "etalon_prefix":"prohodki_etalon", "label_ru":"Проходки", "label_en":"Penetrations", "label_es":"Penetraciones", "label_sw":"Mipenyo", "label_de":"Durchdringungen",
+     "text":{"en":"⚠️ Gaps in penetrations not sealed.", "ru":"⚠️ Не выполнена заделка проходок.", "es":"⚠️ Brechas en penetraciones sin sellar.", "sw":"⚠️ Mipenyo haijafungwa vizuri.", "de":"⚠️ Spalten in Durchdringungen nicht abgedichtet."},
+     "normative":{"en":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "ru":"СП 76.13330.2016 п. 6.4.1.25", "es":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "sw":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2", "de":"IEC 60364-5-52, NEC 300.21, BS 7671 527.2"}},
+    {"keyword":"03_zazemlenie_ne_vypolneno", "etalon_prefix":"zazemlenie_etalon", "label_ru":"Заземление", "label_en":"Earthing", "label_es":"Puesta a tierra", "label_sw":"Kutuliza", "label_de":"Erdung",
+     "text":{"en":"⚠️ Earthing not provided.", "ru":"⚠️ Не выполнено заземление.", "es":"⚠️ No se proporciona puesta a tierra.", "sw":"⚠️ Kutuliza haijafanywa.", "de":"⚠️ Erdung nicht vorhanden."},
+     "normative":{"en":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "ru":"ПУЭ п. 1.7.76", "es":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "sw":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3", "de":"IEC 60364-4-41, NEC 250.4, BS 7671 411.3"}},
+    {"keyword":"04_shpilki_lotka_ne_srezany", "etalon_prefix":"shpilki_etalon", "label_ru":"Шпильки", "label_en":"Studs", "label_es":"Espárragos", "label_sw":"Boliti", "label_de":"Gewindebolzen",
+     "text":{"en":"⚠️ Cable tray studs not trimmed.", "ru":"⚠️ Шпильки лотка не срезаны.", "es":"⚠️ Espárragos de bandeja no recortados.", "sw":"⚠️ Boliti za trei za nyaya hazijakatwa.", "de":"⚠️ Gewindebolzen der Kabeltrasse nicht abgeschnitten."},
+     "normative":{"en":"IEC 61537, NEC 392.18, BS 7671 522.8", "ru":"ГОСТ Р 50571.5.52-2011", "es":"IEC 61537, NEC 392.18, BS 7671 522.8", "sw":"IEC 61537, NEC 392.18, BS 7671 522.8", "de":"IEC 61537, NEC 392.18, BS 7671 522.8"}},
+    {"keyword":"05_oksidy_rzhavchina", "etalon_prefix":"oksidy_etalon", "label_ru":"Окислы", "label_en":"Oxidation", "label_es":"Oxidación", "label_sw":"Oksidi/kutu", "label_de":"Oxidation",
+     "text":{"en":"⚠️ Oxidation/rust on contacts.", "ru":"⚠️ Окислы и ржавчина на контактах.", "es":"⚠️ Oxidación/óxido en contactos.", "sw":"⚠️ Oksidi/kutu kwenye viungo.", "de":"⚠️ Oxidation/Rost an Kontakten."},
+     "normative":{"en":"IEC 60204-1, NEC 110.12", "ru":"ПУЭ п. 1.8.4, ГОСТ 10434-82", "es":"IEC 60204-1, NEC 110.12", "sw":"IEC 60204-1, NEC 110.12", "de":"IEC 60204-1, NEC 110.12"}},
+    {"keyword":"06_otsutstvie_shemy", "etalon_prefix":"shema_etalon", "label_ru":"Схема", "label_en":"Diagram", "label_es":"Diagrama", "label_sw":"Mchoro", "label_de":"Schaltplan",
+     "text":{"en":"⚠️ Single-line diagram missing.", "ru":"⚠️ Отсутствует однолинейная схема.", "es":"⚠️ Falta el diagrama unifilar.", "sw":"⚠️ Mchoro wa mstari mmoja haupo.", "de":"⚠️ Einpoliger Schaltplan fehlt."},
+     "normative":{"en":"IEC 61082-1, NEC 110.22", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "es":"IEC 61082-1, NEC 110.22", "sw":"IEC 61082-1, NEC 110.22", "de":"IEC 61082-1, NEC 110.22"}}
 ]
 
 def init_db():
@@ -379,7 +411,7 @@ def get_category_info(filename, lang):
                 "normative": cat["normative"].get(lang, cat["normative"]["en"])
             }
     return {
-        "text": f"Unknown defect (file: {name})" if lang=="en" else f"Desconocido (archivo: {name})" if lang=="es" else f"Неизвестное замечание (файл: {name})" if lang=="ru" else f"Kasoro isiyojulikana (faili: {name})",
+        "text": f"Unknown defect (file: {name})" if lang=="en" else f"Desconocido (archivo: {name})" if lang=="es" else f"Неизвестное замечание (файл: {name})" if lang=="ru" else f"Kasoro isiyojulikana (faili: {name})" if lang=="sw" else f"Unbekannter Mangel (Datei: {name})",
         "etalon_prefix": None,
         "normative": None
     }
@@ -403,7 +435,8 @@ def get_language_keyboard():
         [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
         [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")],
-        [InlineKeyboardButton("🇰🇪 Kiswahili", callback_data="lang_sw")]
+        [InlineKeyboardButton("🇰🇪 Kiswahili", callback_data="lang_sw")],
+        [InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de")]
     ])
 
 def generate_pdf_report(report_data, lang):
@@ -530,115 +563,4 @@ async def button_callback(update, context):
         if not report_data:
             await query.edit_message_text(t['no_defects'])
             return
-        pdf_buffer = generate_pdf_report(report_data, lang)
-        await query.message.reply_document(
-            document=pdf_buffer,
-            filename=f"Предписание_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="ru" else f"Order_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="en" else f"Orden_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf" if lang=="es" else f"Agizo_{dt.datetime.now().strftime('%d.%m.%Y')}.pdf",
-            caption=t['report_ready']
-        )
-        delete_session(user_id)
-        context.user_data.pop('report_data', None)
-        await query.delete_message()
-        return
-
-    if data.startswith("lang_"):
-        new_lang = data.split("_")[1]
-        set_lang(user_id, new_lang)
-        await query.edit_message_text(T[new_lang]['welcome'])
-        return
-
-    if data.startswith("classify_"):
-        action = data.split("_", 1)[1]
-        if 'review_photos' not in context.user_data or not context.user_data['review_photos']:
-            await query.edit_message_text("❌ No photos left.")
-            return
-        photo_path = context.user_data['review_photos'].pop(0)
-        if action == "skip":
-            await query.edit_message_text(t['classify_skipped'])
-        elif action == "reject":
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-            await query.edit_message_text(t['classify_rejected'])
-        else:
-            cat = next((c for c in CATEGORIES if c["keyword"] == action), None)
-            if not cat:
-                await query.edit_message_text("❌ Unknown category.")
-                return
-            target = os.path.join("photo_db", cat["keyword"])
-            os.makedirs(target, exist_ok=True)
-            new_name = f"{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            new_path = os.path.join(target, new_name)
-            shutil.copy2(photo_path, new_path)
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-            rebuild_index()
-            await query.edit_message_text(t['classify_success'].format(
-                category=cat["label_ru"] if lang=="ru" else cat["label_en"] if lang=="en" else cat["label_es"] if lang=="es" else cat["label_sw"]
-            ))
-        if context.user_data['review_photos']:
-            next_photo = context.user_data['review_photos'][0]
-            with open(next_photo, 'rb') as f:
-                await query.message.reply_photo(photo=f, caption=t['classify_prompt'], reply_markup=get_language_keyboard())
-        else:
-            await query.message.reply_text(t['review_done'])
-        return
-
-async def start_command(update, context):
-    user_id = update.effective_user.id
-    register_user(user_id)
-    lang = get_lang(user_id)
-    await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
-
-async def review_command(update, context):
-    user_id = update.effective_user.id
-    register_user(user_id)
-    lang = get_lang(user_id)
-    t = T[lang]
-    review_dir = "review"
-    if not os.path.exists(review_dir):
-        os.makedirs(review_dir, exist_ok=True)
-        await update.message.reply_text(t['review_empty'])
-        return
-    photos = []
-    for root, _, files in os.walk(review_dir):
-        for f in files:
-            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
-                photos.append(os.path.join(root, f))
-    if not photos:
-        await update.message.reply_text(t['review_empty'])
-        return
-    await update.message.reply_text(t['review_photos_found'].format(count=len(photos)))
-    for path in photos:
-        try:
-            with open(path, 'rb') as f:
-                await update.message.reply_photo(photo=f)
-        except Exception as e:
-            print(f"❌ Error sending {path}: {e}")
-            await update.message.reply_text(f"❌ Could not send: {os.path.basename(path)}")
-    await update.message.reply_text(t['review_done'])
-
-async def stats_command(update, context):
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        lang = get_lang(user_id)
-        await update.message.reply_text(T[lang]['stats_unauthorized'])
-        return
-    total, today, week = get_stats()
-    lang = get_lang(user_id)
-    await update.message.reply_text(T[lang]['stats'].format(total=total, today=today, week=week))
-
-if __name__ == "__main__":
-    init_db()
-    download_and_extract_photos()
-    download_and_extract_etalons()
-    rebuild_index()
-    load_index()
-    load_model()
-    app = Application.builder().token(TOKEN).read_timeout(60).build()
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("review", review_command))
-    app.add_handler(CommandHandler("stats", stats_command))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (GitHub + Swahili ready).")
-    app.run_polling()
+        pdf_buffer = generate_pdf_report
