@@ -42,16 +42,12 @@ USDT_WALLET = "TZ4bfpNTvMdMNRzQJt817pVjF3nEGtCKSH"
 USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 TRONGRID_API = "https://api.trongrid.io/v1/accounts/{address}/transactions/trc20"
 
+# ========== ПЛАТЕЖИ ==========
 def get_recent_transactions(limit=20):
     try:
         url = TRONGRID_API.format(address=USDT_WALLET)
-        params = {
-            "limit": limit,
-            "only_confirmed": "true",
-            "contract_address": USDT_CONTRACT,
-            "only_to": "true"
-        }
-        r = requests.get(url, params=params, timeout=15)
+        params = {"limit": limit, "only_confirmed": "true", "contract_address": USDT_CONTRACT, "only_to": "true"}
+        r = requests.get(url, params=params, timeout=10)
         if r.status_code == 200:
             return r.json().get("data", [])
     except Exception as e:
@@ -64,7 +60,7 @@ def check_payment(txid, expected_amount, user_id):
         txid = "0x" + txid
     try:
         url = f"https://api.trongrid.io/v1/transactions/{txid}/events"
-        r = requests.get(url, timeout=15)
+        r = requests.get(url, timeout=10)
         if r.status_code != 200:
             return None
         events = r.json().get("data", [])
@@ -78,13 +74,13 @@ def check_payment(txid, expected_amount, user_id):
                 continue
             raw_amount = int(result.get("value", 0))
             amount = raw_amount / 1_000_000
-            if amount >= expected_amount:
+            if amount >= expected_amount - 0.001:
                 return amount
     except Exception as e:
         print(f"Tx check error: {e}")
     return None
 
-def check_payment_by_user(user_id, expected_amount, since_minutes=120):
+def check_payment_by_user(user_id, expected_amount, since_minutes=180):
     txs = get_recent_transactions()
     now = time.time() * 1000
     since = now - (since_minutes * 60 * 1000)
@@ -99,10 +95,32 @@ def check_payment_by_user(user_id, expected_amount, since_minutes=120):
             continue
         raw = int(tx.get("value", 0))
         amount = raw / 1_000_000
-        if amount >= expected_amount:
+        if abs(amount - expected_amount) < 0.01:
             return tx.get("transaction_id"), amount
     return None, 0
 
+def get_unique_amount(user_id, base=10):
+    conn = sqlite3.connect("/data/users.db") if os.path.exists("/data") else sqlite3.connect("users.db")
+    c = conn.cursor()
+    r = c.execute("SELECT amount FROM pending_payments WHERE user_id = ?", (user_id,)).fetchone()
+    if r:
+        conn.close()
+        return r[0]
+    amount = base + (user_id % 99) / 100
+    c.execute("INSERT OR REPLACE INTO pending_payments (user_id, amount, created_at) VALUES (?, ?, ?)",
+              (user_id, amount, dt.datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return amount
+
+def clear_pending(user_id):
+    conn = sqlite3.connect("/data/users.db") if os.path.exists("/data") else sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM pending_payments WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+# ========== ЯЗЫКИ ==========
 T = {
     "en": {
         "welcome": "Hello! 👋\nI'm a technical inspection bot. Send me a photo of electrical installation, and I'll find possible violations.\n\nJust send a photo!",
@@ -129,13 +147,14 @@ T = {
         "free_checks_left": "✅ You have {count} free checks left.",
         "free_checks_used": "⚠️ Free checks used up.",
         "buy_button": "💳 Buy checks",
-        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $10 (10 USDT)\n• Unlimited (1 month) — $20 (20 USDT)\n\nSend USDT (TRC20) to:\n`{wallet}`\n\nAfter payment, press the button below.",
+        "buy_text": "You've used all 5 free checks.\n\nOptions:\n• 10 checks — $10 (10 USDT)\n• Unlimited (1 month) — $20 (20 USDT)\n\nSend EXACTLY {amount} USDT (TRC20) to:\n`{wallet}`\n\nAfter payment, press the button below.",
         "pay_sent": "✅ I've sent payment",
         "pay_check": "🔍 Checking payment...",
         "pay_success": "✅ Payment confirmed! {count} checks added to your account.",
-        "pay_fail": "❌ Payment not found. Make sure you sent USDT TRC20 to the correct address.\n\nSend the transaction hash (TXID) here if you have it.",
+        "pay_fail": "❌ Payment not found. Make sure you sent EXACTLY {amount} USDT TRC20 to the correct address.\n\nSend the transaction hash (TXID) here if you have it.",
         "pay_txid_prompt": "📋 Please send the TXID (transaction hash) or just the TXID text.",
-        "balance_text": "Free checks left: {free}\nPaid checks left: {paid}"
+        "balance_text": "Free checks left: {free}\nPaid checks left: {paid}",
+        "stats_unauthorized": "⛔ Not authorized."
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -162,13 +181,14 @@ T = {
         "free_checks_left": "✅ У вас осталось {count} бесплатных проверок.",
         "free_checks_used": "⚠️ Бесплатные проверки закончились.",
         "buy_button": "💳 Купить проверки",
-        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $10 (10 USDT)\n• Безлимит (1 месяц) — $20 (20 USDT)\n\nОтправьте USDT (TRC20) на:\n`{wallet}`\n\nПосле оплаты нажмите кнопку ниже.",
+        "buy_text": "Вы использовали все 5 бесплатных проверок.\n\nВарианты:\n• 10 проверок — $10 (10 USDT)\n• Безлимит (1 месяц) — $20 (20 USDT)\n\nОтправьте РОВНО {amount} USDT (TRC20) на:\n`{wallet}`\n\nПосле оплаты нажмите кнопку ниже.",
         "pay_sent": "✅ Я отправил оплату",
         "pay_check": "🔍 Проверяю оплату...",
         "pay_success": "✅ Оплата подтверждена! {count} проверок добавлено на ваш аккаунт.",
-        "pay_fail": "❌ Оплата не найдена. Убедитесь, что вы отправили USDT TRC20 на правильный адрес.\n\nЕсли у вас есть хеш транзакции (TXID), отправьте его сюда.",
+        "pay_fail": "❌ Оплата не найдена. Убедитесь, что вы отправили РОВНО {amount} USDT TRC20 на правильный адрес.\n\nЕсли у вас есть хеш транзакции (TXID), отправьте его сюда.",
         "pay_txid_prompt": "📋 Отправьте TXID (хеш транзакции) или текст с ним.",
-        "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}"
+        "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}",
+        "stats_unauthorized": "⛔ Вы не авторизованы."
     },
     "de": {
         "welcome": "Hallo! 👋\nIch bin ein technischer Inspektionsbot. Senden Sie mir ein Foto einer elektrischen Anlage, und ich finde mögliche Verstöße.\n\nSenden Sie einfach ein Foto!",
@@ -195,13 +215,14 @@ T = {
         "free_checks_left": "✅ Sie haben noch {count} kostenlose Prüfungen.",
         "free_checks_used": "⚠️ Kostenlose Prüfungen aufgebraucht.",
         "buy_button": "💳 Prüfungen kaufen",
-        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 10 $ (10 USDT)\n• Unbegrenzt (1 Monat) — 20 $ (20 USDT)\n\nSenden Sie USDT (TRC20) an:\n`{wallet}`\n\nNach der Zahlung drücken Sie die Taste unten.",
+        "buy_text": "Sie haben alle 5 kostenlosen Prüfungen genutzt.\n\nOptionen:\n• 10 Prüfungen — 10 $ (10 USDT)\n• Unbegrenzt (1 Monat) — 20 $ (20 USDT)\n\nSenden Sie GENAU {amount} USDT (TRC20) an:\n`{wallet}`\n\nNach der Zahlung drücken Sie die Taste unten.",
         "pay_sent": "✅ Ich habe bezahlt",
         "pay_check": "🔍 Zahlung wird geprüft...",
         "pay_success": "✅ Zahlung bestätigt! {count} Prüfungen zu Ihrem Konto hinzugefügt.",
-        "pay_fail": "❌ Zahlung nicht gefunden. Stellen Sie sicher, dass Sie USDT TRC20 an die richtige Adresse gesendet haben.\n\nWenn Sie die Transaktions-ID (TXID) haben, senden Sie sie hier.",
+        "pay_fail": "❌ Zahlung nicht gefunden. Stellen Sie sicher, dass Sie GENAU {amount} USDT TRC20 an die richtige Adresse gesendet haben.\n\nWenn Sie die Transaktions-ID (TXID) haben, senden Sie sie hier.",
         "pay_txid_prompt": "📋 Senden Sie die TXID (Transaktionshash) oder den TXID-Text.",
-        "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}"
+        "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}",
+        "stats_unauthorized": "⛔ Nicht autorisiert."
     },
     "it": {
         "welcome": "Ciao! 👋\nSono un bot di ispezione tecnica. Inviami una foto di un impianto elettrico e troverò possibili violazioni.\n\nInvia semplicemente una foto!",
@@ -228,13 +249,14 @@ T = {
         "free_checks_left": "✅ Hai ancora {count} controlli gratuiti.",
         "free_checks_used": "⚠️ Controlli gratuiti esauriti.",
         "buy_button": "💳 Acquista controlli",
-        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 10 $ (10 USDT)\n• Illimitato (1 mese) — 20 $ (20 USDT)\n\nInvia USDT (TRC20) a:\n`{wallet}`\n\nDopo il pagamento, premi il pulsante sotto.",
+        "buy_text": "Hai usato tutti i 5 controlli gratuiti.\n\nOpzioni:\n• 10 controlli — 10 $ (10 USDT)\n• Illimitato (1 mese) — 20 $ (20 USDT)\n\nInvia ESATTAMENTE {amount} USDT (TRC20) a:\n`{wallet}`\n\nDopo il pagamento, premi il pulsante sotto.",
         "pay_sent": "✅ Ho inviato il pagamento",
         "pay_check": "🔍 Verifica del pagamento...",
         "pay_success": "✅ Pagamento confermato! {count} controlli aggiunti al tuo account.",
-        "pay_fail": "❌ Pagamento non trovato. Assicurati di aver inviato USDT TRC20 all'indirizzo corretto.\n\nSe hai l'hash della transazione (TXID), invialo qui.",
+        "pay_fail": "❌ Pagamento non trovato. Assicurati di aver inviato ESATTAMENTE {amount} USDT TRC20 all'indirizzo corretto.\n\nSe hai l'hash della transazione (TXID), invialo qui.",
         "pay_txid_prompt": "📋 Invia il TXID (hash della transazione) o il testo del TXID.",
-        "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}"
+        "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}",
+        "stats_unauthorized": "⛔ Non autorizzato."
     },
     "fr": {
         "welcome": "Bonjour ! 👋\nJe suis un bot d'inspection technique. Envoyez-moi une photo d'une installation électrique et je trouverai les violations possibles.\n\nEnvoyez simplement une photo !",
@@ -261,13 +283,14 @@ T = {
         "free_checks_left": "✅ Il vous reste {count} vérifications gratuites.",
         "free_checks_used": "⚠️ Vérifications gratuites épuisées.",
         "buy_button": "💳 Acheter des vérifications",
-        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 10 $ (10 USDT)\n• Illimité (1 mois) — 20 $ (20 USDT)\n\nEnvoyez USDT (TRC20) à :\n`{wallet}`\n\nAprès paiement, appuyez sur le bouton ci-dessous.",
+        "buy_text": "Vous avez utilisé les 5 vérifications gratuites.\n\nOptions :\n• 10 vérifications — 10 $ (10 USDT)\n• Illimité (1 mois) — 20 $ (20 USDT)\n\nEnvoyez EXACTEMENT {amount} USDT (TRC20) à :\n`{wallet}`\n\nAprès paiement, appuyez sur le bouton ci-dessous.",
         "pay_sent": "✅ J'ai envoyé le paiement",
         "pay_check": "🔍 Vérification du paiement...",
         "pay_success": "✅ Paiement confirmé ! {count} vérifications ajoutées à votre compte.",
-        "pay_fail": "❌ Paiement non trouvé. Assurez-vous d'avoir envoyé USDT TRC20 à la bonne adresse.\n\nSi vous avez le hash de transaction (TXID), envoyez-le ici.",
+        "pay_fail": "❌ Paiement non trouvé. Assurez-vous d'avoir envoyé EXACTEMENT {amount} USDT TRC20 à la bonne adresse.\n\nSi vous avez le hash de transaction (TXID), envoyez-le ici.",
         "pay_txid_prompt": "📋 Envoyez le TXID (hash de transaction) ou le texte du TXID.",
-        "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}"
+        "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}",
+        "stats_unauthorized": "⛔ Non autorisé."
     }
 }
 
@@ -298,8 +321,11 @@ CATEGORIES = [
      "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "ru":"Документация и оформление электротехнических документов.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
 ]
 
+def db_path():
+    return "/data/users.db" if os.path.exists("/data") else "users.db"
+
 def init_db():
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
@@ -320,32 +346,38 @@ def init_db():
     conn.close()
 
 def register_user(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     c = conn.cursor()
     now = dt.datetime.now().isoformat()
-    c.execute("INSERT OR IGNORE INTO users (user_id, first_seen, last_seen, language, free_checks, paid_checks) VALUES (?, ?, ?, 'en', ?, 0)", (user_id, now, now, FREE_CHECKS_LIMIT))
-    c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
-    conn.commit(); conn.close()
+    r = c.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if r is None:
+        c.execute("INSERT INTO users (user_id, first_seen, last_seen, language, free_checks, paid_checks) VALUES (?, ?, ?, 'en', ?, 0)",
+                  (user_id, now, now, FREE_CHECKS_LIMIT))
+    else:
+        c.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now, user_id))
+    conn.commit()
+    conn.close()
 
 def get_lang(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     r = conn.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     return r[0] if r and r[0] else "en"
 
 def set_lang(user_id, lang):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     conn.execute("UPDATE users SET language = ? WHERE user_id = ?", (lang, user_id))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
 
 def get_balance(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     r = conn.execute("SELECT free_checks, paid_checks FROM users WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     return (r[0], r[1]) if r else (0, 0)
 
 def use_check(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     r = conn.execute("SELECT free_checks, paid_checks FROM users WHERE user_id = ?", (user_id,)).fetchone()
     if r:
         free, paid = r
@@ -357,45 +389,43 @@ def use_check(user_id):
     conn.close()
 
 def add_paid_checks(user_id, count):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     conn.execute("UPDATE users SET paid_checks = paid_checks + ? WHERE user_id = ?", (count, user_id))
-    conn.commit(); conn.close()
-
-def save_pending(user_id, amount):
-    conn = sqlite3.connect("users.db")
-    conn.execute("INSERT OR REPLACE INTO pending_payments (user_id, amount, created_at) VALUES (?, ?, ?)", (user_id, amount, dt.datetime.now().isoformat()))
-    conn.commit(); conn.close()
-
-def clear_pending(user_id):
-    conn = sqlite3.connect("users.db")
-    conn.execute("DELETE FROM pending_payments WHERE user_id = ?", (user_id,))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
 
 def get_stats():
-    conn = sqlite3.connect("users.db")
-    total = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    conn = sqlite3.connect(db_path())
+    c = conn.cursor()
+    total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     today = dt.datetime.now().date().isoformat()
-    today_count = conn.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) = ?", (today,)).fetchone()[0]
+    today_count = c.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) = ?", (today,)).fetchone()[0]
     week_ago = (dt.datetime.now() - timedelta(days=7)).date().isoformat()
-    week_count = conn.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) >= ?", (week_ago,)).fetchone()[0]
+    week_count = c.execute("SELECT COUNT(*) FROM users WHERE date(first_seen) >= ?", (week_ago,)).fetchone()[0]
+    active_week = c.execute("SELECT COUNT(*) FROM users WHERE date(last_seen) >= ?", (week_ago,)).fetchone()[0]
+    total_paid = c.execute("SELECT SUM(paid_checks) FROM users").fetchone()[0] or 0
+    total_free = c.execute("SELECT SUM(free_checks) FROM users").fetchone()[0] or 0
+    top_users = c.execute("SELECT user_id, paid_checks FROM users WHERE paid_checks > 0 ORDER BY paid_checks DESC LIMIT 5").fetchall()
     conn.close()
-    return total, today_count, week_count
+    return total, today_count, week_count, active_week, total_paid, total_free, top_users
 
 def save_session(user_id, report_data):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     conn.execute("INSERT OR REPLACE INTO sessions (user_id, report_data, created_at) VALUES (?, ?, ?)", (user_id, json.dumps(report_data), dt.datetime.now().isoformat()))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
 
 def load_session(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     r = conn.execute("SELECT report_data FROM sessions WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     return json.loads(r[0]) if r else None
 
 def delete_session(user_id):
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
 
 try:
     pdfmetrics.registerFont(ttfonts.TTFont('DejaVuSans', 'DejaVuSans.ttf'))
@@ -439,6 +469,7 @@ def load_index():
         index = faiss.read_index(INDEX_PATH)
         with open(PATHS_PATH, "rb") as f: raw = pickle.load(f)
         image_paths = [os.path.join("photo_db", os.path.basename(p)) for p in raw]
+        print(f"Index loaded, {len(image_paths)} images.")
 
 def load_model():
     global embedder, transform
@@ -452,13 +483,14 @@ def load_model():
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
+            print("Model loaded.")
         except Exception as e:
             print(f"⚠️ Model not loaded: {e}")
             embedder = None
 
 def get_embedding(image_path):
     if embedder is None:
-        return np.random.rand(128).astype('float32')
+        return None
     img = Image.open(image_path).convert('RGB')
     img_tensor = transform(img).unsqueeze(0)
     with torch.no_grad():
@@ -468,21 +500,11 @@ def get_category_info(filename, lang):
     name = os.path.basename(filename)
     for cat in CATEGORIES:
         if name.startswith(cat["keyword"]):
-            return {
-                "text": cat["text"].get(lang, cat["text"]["en"]),
-                "etalon_prefix": cat["etalon_prefix"],
-                "normative": cat["normative"].get(lang, cat["normative"]["en"]),
-                "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))
-            }
+            return {"text": cat["text"].get(lang, cat["text"]["en"]), "etalon_prefix": cat["etalon_prefix"], "normative": cat["normative"].get(lang, cat["normative"]["en"]), "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))}
     parts = name.split('_')
     for cat in CATEGORIES:
         if any(kp in parts for kp in cat["keyword"].split('_')):
-            return {
-                "text": cat["text"].get(lang, cat["text"]["en"]),
-                "etalon_prefix": cat["etalon_prefix"],
-                "normative": cat["normative"].get(lang, cat["normative"]["en"]),
-                "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))
-            }
+            return {"text": cat["text"].get(lang, cat["text"]["en"]), "etalon_prefix": cat["etalon_prefix"], "normative": cat["normative"].get(lang, cat["normative"]["en"]), "normative_desc": cat.get("normative_desc", {}).get(lang, cat.get("normative_desc", {}).get("en", ""))}
     return {"text": f"Unknown defect (file: {name})", "etalon_prefix": None, "normative": None, "normative_desc": ""}
 
 def find_etalon(prefix):
@@ -505,10 +527,7 @@ def get_language_keyboard():
     ])
 
 def get_buy_keyboard(lang):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")],
-        [InlineKeyboardButton(T[lang]['pay_sent'], callback_data="pay_sent")]
-    ])
+    return InlineKeyboardMarkup([[InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")]])
 
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
@@ -564,8 +583,9 @@ async def handle_photo(update, context):
     t = T[lang]
     free, paid = get_balance(user_id)
     if free <= 0 and paid <= 0:
+        amount = get_unique_amount(user_id)
         await update.message.reply_text(
-            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDT_WALLET),
+            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDT_WALLET, amount=amount),
             reply_markup=get_buy_keyboard(lang)
         )
         return
@@ -576,6 +596,9 @@ async def handle_photo(update, context):
     await file.download_to_drive(user_path)
     emb = get_embedding(user_path)
     os.remove(user_path)
+    if emb is None:
+        await update.message.reply_text("⚠️ Service temporarily unavailable. Please try again later.")
+        return
     emb = np.array([emb]).astype('float32')
     distances, indices = index.search(emb, 3)
     if len(indices[0]) == 0 or indices[0][0] == -1:
@@ -628,7 +651,7 @@ async def handle_txid(update, context):
         clear_pending(user_id)
         await update.message.reply_text(t['pay_success'].format(count=10))
     else:
-        await update.message.reply_text(t['pay_fail'])
+        await update.message.reply_text(t['pay_fail'].format(amount=get_unique_amount(user_id)))
 
 async def button_callback(update, context):
     query = update.callback_query
@@ -640,15 +663,17 @@ async def button_callback(update, context):
     data = query.data
 
     if data == "buy_checks":
+        amount = get_unique_amount(user_id)
         await query.message.reply_text(
-            t['buy_text'].format(wallet=USDT_WALLET),
+            t['buy_text'].format(wallet=USDT_WALLET, amount=amount),
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(t['pay_sent'], callback_data="pay_sent")]])
         )
         return
 
     if data == "pay_sent":
+        amount = get_unique_amount(user_id)
         await query.message.reply_text(t['pay_check'])
-        txid, amount = check_payment_by_user(user_id, 10, since_minutes=180)
+        txid, found = check_payment_by_user(user_id, amount, since_minutes=180)
         if txid:
             add_paid_checks(user_id, 10)
             clear_pending(user_id)
@@ -683,7 +708,16 @@ async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_lang(user_id)
-    await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
+    t = T[lang]
+    free, paid = get_balance(user_id)
+    if free <= 0 and paid <= 0:
+        amount = get_unique_amount(user_id)
+        await update.message.reply_text(
+            t['free_checks_used'] + "\n\n" + t['buy_text'].format(wallet=USDT_WALLET, amount=amount),
+            reply_markup=get_buy_keyboard(lang)
+        )
+    else:
+        await update.message.reply_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
 
 async def balance_command(update, context):
     user_id = update.effective_user.id
@@ -696,12 +730,53 @@ async def balance_command(update, context):
         reply_markup=get_buy_keyboard(lang)
     )
 
+async def review_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⛔ Not authorized.")
+        return
+    review_dir = "review"
+    if not os.path.exists(review_dir):
+        os.makedirs(review_dir, exist_ok=True)
+        await update.message.reply_text("📭 Review folder is empty.")
+        return
+    photos = []
+    for root, _, files in os.walk(review_dir):
+        for f in files:
+            if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                photos.append(os.path.join(root, f))
+    if not photos:
+        await update.message.reply_text("📭 Review folder is empty.")
+        return
+    await update.message.reply_text(f"📸 Found {len(photos)} photos.")
+    for path in photos:
+        try:
+            with open(path, 'rb') as f:
+                await update.message.reply_photo(photo=f)
+        except Exception as e:
+            print(f"❌ Error sending {path}: {e}")
+    await update.message.reply_text("✅ All photos sent.")
+
 async def stats_command(update, context):
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
-        await update.message.reply_text(T[get_lang(user_id)]['stats_unauthorized']); return
-    total, today, week = get_stats()
-    await update.message.reply_text(f"📊 Total: {total}\n📈 Today: {today}\n📅 Week: {week}")
+        await update.message.reply_text("⛔ Not authorized.")
+        return
+    total, today, week, active, paid, free, top = get_stats()
+    text = (
+        f"📊 **Bot Statistics**\n\n"
+        f"👥 Total users: {total}\n"
+        f"📈 New today: {today}\n"
+        f"📅 New this week: {week}\n"
+        f"🔥 Active this week: {active}\n"
+        f"💰 Total paid checks: {paid}\n"
+        f"🎁 Free checks left: {free}"
+    )
+    if top:
+        text += "\n\n🏆 **Top paid users:**\n"
+        for uid, p in top:
+            text += f"• `{uid}` — {p} paid\n"
+    await update.message.reply_text(text, parse_mode="Markdown")
 
 async def addchecks_command(update, context):
     user_id = update.effective_user.id
@@ -726,9 +801,10 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("balance", balance_command))
     app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("addchecks", addchecks_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_txid))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (AUTO payment, 10 USDT = 10 checks).")
+    print("🚀 Bot started (FINAL: 5 free checks, 10 USDT = 10 checks, auto payment).")
     app.run_polling()
