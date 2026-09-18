@@ -42,6 +42,9 @@ USDT_WALLET = "TZ4bfpNTvMdMNRzQJt817pVjF3nEGtCKSH"
 USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 TRONGRID_API = "https://api.trongrid.io/v1/accounts/{address}/transactions/trc20"
 
+def db_path():
+    return "/data/users.db" if os.path.exists("/data") else "users.db"
+
 # ========== ПЛАТЕЖИ ==========
 def get_recent_transactions(limit=20):
     try:
@@ -74,7 +77,7 @@ def check_payment(txid, expected_amount, user_id):
                 continue
             raw_amount = int(result.get("value", 0))
             amount = raw_amount / 1_000_000
-            if amount >= expected_amount - 0.001:
+            if amount >= expected_amount - 0.01:
                 return amount
     except Exception as e:
         print(f"Tx check error: {e}")
@@ -100,7 +103,7 @@ def check_payment_by_user(user_id, expected_amount, since_minutes=180):
     return None, 0
 
 def get_unique_amount(user_id, base=10):
-    conn = sqlite3.connect("/data/users.db") if os.path.exists("/data") else sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     c = conn.cursor()
     r = c.execute("SELECT amount FROM pending_payments WHERE user_id = ?", (user_id,)).fetchone()
     if r:
@@ -114,7 +117,7 @@ def get_unique_amount(user_id, base=10):
     return amount
 
 def clear_pending(user_id):
-    conn = sqlite3.connect("/data/users.db") if os.path.exists("/data") else sqlite3.connect("users.db")
+    conn = sqlite3.connect(db_path())
     c = conn.cursor()
     c.execute("DELETE FROM pending_payments WHERE user_id = ?", (user_id,))
     conn.commit()
@@ -154,7 +157,8 @@ T = {
         "pay_fail": "❌ Payment not found. Make sure you sent EXACTLY {amount} USDT TRC20 to the correct address.\n\nSend the transaction hash (TXID) here if you have it.",
         "pay_txid_prompt": "📋 Please send the TXID (transaction hash) or just the TXID text.",
         "balance_text": "Free checks left: {free}\nPaid checks left: {paid}",
-        "stats_unauthorized": "⛔ Not authorized."
+        "stats_unauthorized": "⛔ Not authorized.",
+        "change_lang": "🌐 Change language"
     },
     "ru": {
         "welcome": "Привет! 👋\nЯ бот технической инспекции. Отправь мне фото электроустановки, и я найду возможные нарушения.\n\nПросто отправь фото!",
@@ -188,7 +192,8 @@ T = {
         "pay_fail": "❌ Оплата не найдена. Убедитесь, что вы отправили РОВНО {amount} USDT TRC20 на правильный адрес.\n\nЕсли у вас есть хеш транзакции (TXID), отправьте его сюда.",
         "pay_txid_prompt": "📋 Отправьте TXID (хеш транзакции) или текст с ним.",
         "balance_text": "Бесплатных проверок: {free}\nПлатных проверок: {paid}",
-        "stats_unauthorized": "⛔ Вы не авторизованы."
+        "stats_unauthorized": "⛔ Вы не авторизованы.",
+        "change_lang": "🌐 Сменить язык"
     },
     "de": {
         "welcome": "Hallo! 👋\nIch bin ein technischer Inspektionsbot. Senden Sie mir ein Foto einer elektrischen Anlage, und ich finde mögliche Verstöße.\n\nSenden Sie einfach ein Foto!",
@@ -222,7 +227,8 @@ T = {
         "pay_fail": "❌ Zahlung nicht gefunden. Stellen Sie sicher, dass Sie GENAU {amount} USDT TRC20 an die richtige Adresse gesendet haben.\n\nWenn Sie die Transaktions-ID (TXID) haben, senden Sie sie hier.",
         "pay_txid_prompt": "📋 Senden Sie die TXID (Transaktionshash) oder den TXID-Text.",
         "balance_text": "Kostenlose Prüfungen: {free}\nBezahlte Prüfungen: {paid}",
-        "stats_unauthorized": "⛔ Nicht autorisiert."
+        "stats_unauthorized": "⛔ Nicht autorisiert.",
+        "change_lang": "🌐 Sprache ändern"
     },
     "it": {
         "welcome": "Ciao! 👋\nSono un bot di ispezione tecnica. Inviami una foto di un impianto elettrico e troverò possibili violazioni.\n\nInvia semplicemente una foto!",
@@ -256,7 +262,8 @@ T = {
         "pay_fail": "❌ Pagamento non trovato. Assicurati di aver inviato ESATTAMENTE {amount} USDT TRC20 all'indirizzo corretto.\n\nSe hai l'hash della transazione (TXID), invialo qui.",
         "pay_txid_prompt": "📋 Invia il TXID (hash della transazione) o il testo del TXID.",
         "balance_text": "Controlli gratuiti: {free}\nControlli a pagamento: {paid}",
-        "stats_unauthorized": "⛔ Non autorizzato."
+        "stats_unauthorized": "⛔ Non autorizzato.",
+        "change_lang": "🌐 Cambia lingua"
     },
     "fr": {
         "welcome": "Bonjour ! 👋\nJe suis un bot d'inspection technique. Envoyez-moi une photo d'une installation électrique et je trouverai les violations possibles.\n\nEnvoyez simplement une photo !",
@@ -290,7 +297,8 @@ T = {
         "pay_fail": "❌ Paiement non trouvé. Assurez-vous d'avoir envoyé EXACTEMENT {amount} USDT TRC20 à la bonne adresse.\n\nSi vous avez le hash de transaction (TXID), envoyez-le ici.",
         "pay_txid_prompt": "📋 Envoyez le TXID (hash de transaction) ou le texte du TXID.",
         "balance_text": "Vérifications gratuites : {free}\nVérifications payantes : {paid}",
-        "stats_unauthorized": "⛔ Non autorisé."
+        "stats_unauthorized": "⛔ Non autorisé.",
+        "change_lang": "🌐 Changer de langue"
     }
 }
 
@@ -320,9 +328,6 @@ CATEGORIES = [
      "normative":{"en":"IEC 61082-1:2014 §4, HD 60364-6:2016 §6.4", "ru":"ПУЭ п. 1.8.4, СП 76.13330.2016 п. 6.4.8", "de":"DIN VDE 0100-100 §514.5, DIN EN 61082-1", "it":"CEI 64-8 Art. 514.5, CEI EN 61082-1", "fr":"NF C 15-100 Art. 514.5, NF EN 61082-1"},
      "normative_desc":{"en":"Documentation and preparation of electrotechnical documents.", "ru":"Документация и оформление электротехнических документов.", "de":"Dokumentation und Erstellung elektrotechnischer Dokumente.", "it":"Documentazione e preparazione di documenti elettrotecnici.", "fr":"Documentation et préparation de documents électrotechniques."}}
 ]
-
-def db_path():
-    return "/data/users.db" if os.path.exists("/data") else "users.db"
 
 def init_db():
     conn = sqlite3.connect(db_path())
@@ -391,6 +396,12 @@ def use_check(user_id):
 def add_paid_checks(user_id, count):
     conn = sqlite3.connect(db_path())
     conn.execute("UPDATE users SET paid_checks = paid_checks + ? WHERE user_id = ?", (count, user_id))
+    conn.commit()
+    conn.close()
+
+def reset_checks(user_id):
+    conn = sqlite3.connect(db_path())
+    conn.execute("UPDATE users SET free_checks = 0, paid_checks = 0 WHERE user_id = ?", (user_id,))
     conn.commit()
     conn.close()
 
@@ -527,7 +538,10 @@ def get_language_keyboard():
     ])
 
 def get_buy_keyboard(lang):
-    return InlineKeyboardMarkup([[InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")]])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")],
+        [InlineKeyboardButton(T[lang]['change_lang'], callback_data="change_lang")]
+    ])
 
 def generate_pdf_report(report_data, lang):
     buffer = io.BytesIO()
@@ -662,6 +676,10 @@ async def button_callback(update, context):
     t = T[lang]
     data = query.data
 
+    if data == "change_lang":
+        await query.edit_message_text(T[lang]['choose_language'], reply_markup=get_language_keyboard())
+        return
+
     if data == "buy_checks":
         amount = get_unique_amount(user_id)
         await query.message.reply_text(
@@ -791,6 +809,19 @@ async def addchecks_command(update, context):
     except:
         await update.message.reply_text("❌ Invalid arguments.")
 
+async def resetchecks_command(update, context):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("⛔ Not authorized."); return
+    args = context.args
+    if len(args) != 1:
+        await update.message.reply_text("Usage: /resetchecks <user_id>"); return
+    try:
+        reset_checks(int(args[0]))
+        await update.message.reply_text(f"✅ Reset all checks for user {args[0]}.")
+    except:
+        await update.message.reply_text("❌ Invalid arguments.")
+
 if __name__ == "__main__":
     init_db()
     download_and_extract_photos()
@@ -803,8 +834,9 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("addchecks", addchecks_command))
+    app.add_handler(CommandHandler("resetchecks", resetchecks_command))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_txid))
     app.add_handler(CallbackQueryHandler(button_callback))
-    print("🚀 Bot started (FINAL: 5 free checks, 10 USDT = 10 checks, auto payment).")
+    print("🚀 Bot started (FINAL: 5 free checks, 10 USDT = 10 checks, auto payment, language switch).")
     app.run_polling()
