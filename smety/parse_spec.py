@@ -1,8 +1,11 @@
 """
-parse_spec.py v4
-Парсер спецификации оборудования из PDF ЭОМ (формат 2004-ЭОМ2.3.СО).
-- Позиции хранятся строками (не преобразуются в числа).
-- Заголовки разделов ищутся и в таблицах, и в тексте страницы.
+parse_spec.py v7
+Парсер спецификаций из PDF (ЭОМ, СС, СПС, СОУЭ, ЭМ).
+
+НОВОЕ в v7:
+- find_col_indices: распознаёт "Поз.", "№", "Позиц", "ед.изм" (с переносами)
+- find_pos_in_row: ищет позицию во ВСЕХ колонках (не только первых 5)
+- page_has_spec_table: требует 5+ строк с цифрами (отсеивает оглавления)
 """
 import re
 import logging
@@ -13,29 +16,85 @@ import pandas as pd
 
 PDF_PATH = Path("spec.pdf")
 OUT_XLSX = Path("spec_materials.xlsx")
-OUT_CSV  = Path("spec_materials.csv")
+OUT_CSV = Path("spec_materials.csv")
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 log = logging.getLogger("parse_spec")
 
 
 SECTIONS = [
-    ("ЭЛЕКТРОЩИТОВОЕ ОБОРУДОВАНИЕ", "Электрощитовое оборудование"),
+    ("ЭЛЕКТРОЩИТОВОЕ", "Электрощитовое оборудование"),
+    ("ЩИТОВОЕ ОБОРУДОВАНИЕ", "Щитовое оборудование"),
+    ("ЩИТЫ СИЛОВЫЕ", "Щиты силовые и распределительные"),
     ("КАБЕЛЬНАЯ ПРОДУКЦИЯ", "Кабельная продукция"),
-    ("КАБЕЛЕНЕСУЩАЯ ПРОДУКЦИЯ", "Кабеленесущая продукция"),
+    ("КАБЕЛЕНЕСУЩАЯ", "Кабеленесущая продукция"),
+    ("ЭЛЕКТРОУСТАНОВОЧНЫЕ", "Электроустановочные изделия"),
+    ("ИЗДЕЛИЯ ЭЛЕКТРОУСТАНОВОЧНЫЕ", "Электроустановочные изделия"),
+    ("ОСВЕТИТЕЛЬНОЕ", "Осветительное оборудование"),
+    ("МОНТАЖНЫЕ МАТЕРИАЛЫ", "Монтажные материалы"),
+    ("МАТЕРИАЛЫ", "Монтажные материалы"),
+    ("ПРИБОРЫ ПРИЕМНО", "Приборы приемно-контрольные"),
+    ("ИЗВЕЩАТЕЛИ", "Извещатели пожарные"),
+    ("ОПОВЕЩАТЕЛИ", "Оповещатели"),
+    ("ИСТОЧНИКИ ПИТАНИЯ", "Источники питания"),
+    ("КАБЕЛЬНОЕ ОБОРУДОВАНИЕ", "Кабельное оборудование"),
+    ("КАБЕЛЬ И ПРОВОД", "Кабельная продукция"),
+    ("МЕТАЛЛОПРОКАТ", "Металлопрокат"),
+    ("АККУМУЛЯТОРНЫЕ", "Аккумуляторные батареи"),
+    ("УСТРОЙСТВА УПРАВЛЕНИЯ", "Устройства управления и индикации"),
+    ("УСТРОЙСТВА ИСПОЛНИТЕЛЬНЫЕ", "Устройства исполнительные"),
+]
+
+
+SPEC_MARKERS = [
+    "спецификация оборудования",
+    "спецификация электроустановочных",
+    "спецификация осветительного",
+    "спецификация оборудования и материалов",
+    "спецификация изделий и материалов",
+    "ведомость оборудования",
 ]
 
 
 def detect_section(text):
     if not text:
         return None
-    t = text.upper()
-    # нормализуем возможные переносы
-    t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"\s+", " ", text.upper())
     for key, label in SECTIONS:
         if key in t:
             return label
+    return None
+
+
+def detect_section_from_name(name):
+    if not name:
+        return None
+    n = name.lower()
+
+    if any(w in n for w in ["датчик протеч", "контроллер протеч", "пожарная сигнализация"]):
+        return "Слаботочка (СПС/СОУЭ)"
+    if any(w in n for w in ["розетк", "выключател", "переключател"]):
+        return "Электроустановочные изделия"
+    if any(w in n for w in ["светильник", "лента", "люстра", "блок питания"]):
+        return "Осветительное оборудование"
+    if any(w in n for w in ["кабель", "ввг", "вбш", "ппг", "кис-", "кпс", "провод", "пугв", "utp", "ftp", "parlan"]):
+        return "Кабельная продукция"
+    if any(w in n for w in ["лоток", "труба", "гофр", "короб", "канал", "держател", "клипс", "лотк"]):
+        return "Кабеленесущая продукция"
+    if any(w in n for w in ["щит", "шкаф", "панель", "грщ", "вру", "впу", "щр", "щс", "щк"]):
+        return "Щитовое оборудование"
+    if any(w in n for w in ["извещател", "оповещател", "табло", "сирена", "ипр", "аврора", "орфей"]):
+        return "Слаботочка (СПС/СОУЭ)"
+    if any(w in n for w in ["блок питания", "аккумулятор", "батарея", "бп-"]):
+        return "Источники питания"
+    if any(w in n for w in ["прибор приемно", "буз", "рр-", "арк"]):
+        return "Приборы приемно-контрольные"
+    if any(w in n for w in ["автомат", "дифавтомат", "узо", "рубильник", "контактор", "выключатель автоматический"]):
+        return "Щитовое оборудование"
+    if any(w in n for w in ["наконечник", "болт", "гайка", "шайба", "шпильк", "саморез", "дюбель", "лента монтажная"]):
+        return "Монтажные материалы"
+    if any(w in n for w in ["полоса", "уголок", "швеллер"]):
+        return "Металлопрокат"
     return None
 
 
@@ -55,26 +114,30 @@ def parse_qty(s):
     return float(m.group()) if m else None
 
 
+# ============ ГИБКИЙ ПОИСК КОЛОНОК ============
 def find_col_indices(header_row):
-    """Находит индексы колонок по тексту в заголовке."""
+    """Гибкий поиск колонок: «Поз.», «№», «Позиц», «ед.изм» и т.д."""
     cols = {}
     for i, cell in enumerate(header_row):
         c = clean(cell).lower()
         if not c:
             continue
-        if "позиция" in c and "col_pos" not in cols:
+
+        # Позиция: "позиц", "поз.", "поз ", "№", "n.", "n"
+        if ("col_pos" not in cols and
+            ("позиц" in c or c.startswith("поз") or c == "№" or c == "n." or c == "n" or c == "поз.")):
             cols["col_pos"] = i
         elif "наименование" in c and "col_name" not in cols:
             cols["col_name"] = i
-        elif "тип" in c and "марка" in c and "col_type" not in cols:
+        elif ("тип" in c or "марка" in c) and "col_type" not in cols:
             cols["col_type"] = i
         elif "код" in c and "col_code" not in cols:
             cols["col_code"] = i
-        elif "завод" in c and "col_vendor" not in cols:
+        elif ("завод" in c or "поставщик" in c or "изготовител" in c) and "col_vendor" not in cols:
             cols["col_vendor"] = i
-        elif ("единица" in c or "ед." in c) and "col_unit" not in cols:
+        elif ("единица" in c or "ед. изм" in c or "ед.изм" in c or "ед измер" in c or c == "ед.") and "col_unit" not in cols:
             cols["col_unit"] = i
-        elif ("колич" in c or "кол-" in c or c.startswith("кол")) and "col_qty" not in cols:
+        elif ("колич" in c or "кол-" in c or c.startswith("кол") or "кол." in c) and "col_qty" not in cols:
             cols["col_qty"] = i
         elif "масса" in c and "col_mass" not in cols:
             cols["col_mass"] = i
@@ -89,13 +152,78 @@ def get_cell(row, idx):
     return clean(row[idx])
 
 
+# ============ ГИБКИЙ ПОИСК ПОЗИЦИИ ============
+def find_pos_in_row(row, cols):
+    """Ищет позицию: сначала col_pos, потом во ВСЕХ колонках."""
+    # 1. Пробуем col_pos
+    pos = get_cell(row, cols.get("col_pos"))
+    if pos and re.match(r"^\d+(?:\.\d+)*$", pos):
+        return pos
+    # 2. Fallback: ищем во ВСЕХ колонках
+    for i in range(len(row)):
+        c = clean(row[i])
+        if re.match(r"^\d+(?:\.\d+)*$", c):
+            return c
+    return None
+
+
+def page_has_strong_marker(page_text):
+    if not page_text:
+        return False
+    t = page_text.lower()
+    return any(m in t for m in SPEC_MARKERS)
+
+
+# ============ СТРОГАЯ ПРОВЕРКА ТАБЛИЦЫ ============
+def page_has_spec_table(page):
+    """Требует 5+ строк с данными (отсеивает оглавления)."""
+    tables = page.extract_tables() or []
+    for table in tables:
+        if not table or len(table) < 5:
+            continue
+        for row in table[:5]:
+            row_text = " ".join(clean(c) for c in row).lower()
+            if ("поз" in row_text and "наименование" in row_text):
+                data_rows = 0
+                for r in table[1:12]:
+                    if not r:
+                        continue
+                    joined = " ".join(clean(c) for c in r)
+                    if re.search(r"\d", joined) and len(joined) > 20:
+                        data_rows += 1
+                if data_rows >= 5:
+                    return True
+                break
+    return False
+
+
+def find_spec_pages(pdf):
+    spec_pages = []
+    for i, page in enumerate(pdf.pages):
+        text = page.extract_text() or ""
+        if page_has_strong_marker(text):
+            spec_pages.append(i)
+            continue
+        if page_has_spec_table(page):
+            spec_pages.append(i)
+    return spec_pages
+
+
 def extract_spec(pdf_path):
     items = []
     current_section = ""
 
     with pdfplumber.open(pdf_path) as pdf:
-        for pno, page in enumerate(pdf.pages, 1):
-            # 1) сначала ищем разделы в тексте всей страницы (вне таблицы)
+        spec_pages = find_spec_pages(pdf)
+
+        if spec_pages:
+            log.info("Найдены страницы со спецификацией: %s", [p + 1 for p in spec_pages])
+            pages_to_parse = [pdf.pages[i] for i in spec_pages]
+        else:
+            log.warning("Спецификация не найдена — парсим все страницы (fallback)")
+            pages_to_parse = pdf.pages
+
+        for pno, page in enumerate(pages_to_parse, 1):
             page_text = (page.extract_text() or "").upper()
             page_sections = []
             for key, label in SECTIONS:
@@ -103,8 +231,7 @@ def extract_spec(pdf_path):
                     page_sections.append(label)
 
             tables = page.extract_tables() or []
-            log.info("Страница %d: таблиц %d, разделов в тексте: %s",
-                     pno, len(tables), page_sections)
+            log.info("Страница %d: таблиц %d, разделов: %s", pno, len(tables), page_sections)
 
             for table in tables:
                 if not table:
@@ -112,13 +239,20 @@ def extract_spec(pdf_path):
 
                 header_idx = None
                 cols = {}
-                for i, row in enumerate(table[:3]):
+                for i, row in enumerate(table[:5]):
                     row_text = " ".join(clean(c) for c in row).lower()
-                    if "позиция" in row_text and "наименование" in row_text:
+                    if ("поз" in row_text and "наименование" in row_text):
                         header_idx = i
                         cols = find_col_indices(row)
                         break
-                if header_idx is None or "col_pos" not in cols:
+                    if ("наименование" in row_text and
+                        ("ед. изм" in row_text or "ед " in row_text or "ед.изм" in row_text) and
+                        ("кол." in row_text or "кол-во" in row_text or "кол " in row_text)):
+                        header_idx = i
+                        cols = find_col_indices(row)
+                        break
+
+                if header_idx is None or "col_name" not in cols:
                     continue
 
                 log.info("  Заголовок на строке %d, колонки: %s", header_idx, cols)
@@ -134,29 +268,24 @@ def extract_spec(pdf_path):
                         log.info("  Раздел (из ячейки): %s", sec)
                         continue
 
-                    pos = get_cell(row, cols.get("col_pos"))
-                    if not pos or not re.match(r"^\d+(?:\.\d+)*$", pos):
+                    pos = find_pos_in_row(row, cols)
+                    if not pos:
                         continue
 
                     name = get_cell(row, cols.get("col_name"))
                     if not name or len(name) < 3:
                         continue
 
-                    # если раздел ещё не установлен — берём первый из текста страницы
                     section_for_row = current_section
+                    if not section_for_row:
+                        section_for_row = detect_section_from_name(name)
                     if not section_for_row and page_sections:
                         section_for_row = page_sections[0]
-
-                    # эвристика: позиции 14.x — кабели, 15.x — кабеленесущие
-                    if pos.startswith("14.") or pos == "14":
-                        section_for_row = "Кабельная продукция"
-                    elif pos.startswith("15.") or pos == "15":
-                        section_for_row = "Кабеленесущая продукция"
-                    elif re.match(r"^\d+(?:\.\d+)?$", pos) and float(pos) <= 13:
-                        section_for_row = "Электрощитовое оборудование"
+                    if not section_for_row:
+                        section_for_row = "Прочее"
 
                     item = {
-                        "Позиция": pos,  # строка!
+                        "Позиция": pos,
                         "Раздел": section_for_row,
                         "Наименование": name,
                         "Тип/марка": get_cell(row, cols.get("col_type")),
@@ -186,8 +315,6 @@ def main():
         return
 
     df = pd.DataFrame(items)
-
-    # ВАЖНО: пишем позицию как строку, чтобы Excel не превратил "1.1" в "1.10"
     df["Позиция"] = df["Позиция"].astype(str)
 
     df.to_excel(OUT_XLSX, index=False)
@@ -197,7 +324,7 @@ def main():
 
     log.info("--- Сводка по разделам ---")
     for sec, cnt in df["Раздел"].value_counts().items():
-        log.info("  %-30s %d поз.", sec or "(без раздела)", cnt)
+        log.info("  %-40s %d поз.", sec or "(без раздела)", cnt)
 
     log.info("--- Первые 8 позиций ---")
     for _, r in df.head(8).iterrows():
