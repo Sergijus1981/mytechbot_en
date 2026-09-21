@@ -1,0 +1,47 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# === Секреты ===
+.env
+*.env
+config_secret.py
+token.txt
+
+# === Локальный мусор ===
+cloudflared.exe
+ngrok.exe
+ngrok.zip
+proxy_server.py
+proxy.log
+*.backup
+bot.py.v*.backup
+*.log
+
+# === PDF и временные файлы ===
+*.pdf
+!smety/tests/*.pdf
+
+# === Базы фото (локальные) ===
+photo_db/
+etalons/
+*.tar.gz
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
