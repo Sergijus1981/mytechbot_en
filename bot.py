@@ -1494,7 +1494,7 @@ async def _run_smeta_task(update, context, user_id, lang, pdf_path, user_dir):
             with open(result["smeta_full"], "rb") as f:
                 await update.message.reply_document(
                     document=f,
-                    filename=f"Smeta_EOM_{dt.datetime.now().strftime('%Y%m%d')}.xlsx",
+                    filename=f"{_project_name(user_dir)[:40]}_{dt.datetime.now().strftime('%Y%m%d')}.xlsx",
                     caption="✅ Смета готова. Спасибо за использование!")
         except Exception as e:
             await update.message.reply_text(f"❌ Ошибка отправки файла: {e}")
