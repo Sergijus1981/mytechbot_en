@@ -1,8 +1,11 @@
 """
-make_smeta_eom.py v8
-Составление сметы по спецификации ЭОМ.
-- Бренд проверяется ТОЛЬКО для известных брендов (ДКС, IEK, EKF, КВТ).
-- Для остальных (Электрокабель, Северная Аврора, АЛЮР) — ищем аналог.
+make_smeta_eom.py v11
+Составление сметы по спецификации.
+
+НОВОЕ в v11:
+- BRAND_ALIASES: Legrand/Schneider/ABB → IEK (аналоги, ушедшие из РФ)
+- get_vendor: заменяет бренд на аналог
+- search_fast/search_full: fallback без бренда, если с брендом 0
 """
 import re
 import sys
@@ -21,15 +24,49 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s: %(message)s")
 log = logging.getLogger("make_smeta_eom")
 
-SKIP_SECTIONS = {"Электрощитовое оборудование"}
 
-# строгие бренды — только для них проверяем совпадение
+# ===== Бренды для строгой проверки =====
 STRICT_BRANDS = {
     "дкс", "dkc",
     "iek", "иэк",
     "ekf", "екф",
     "квт", "kvt",
+    "legrand", "леgrand", "ле",
+    "abb", "абб",
+    "schneider", "шнайдер",
+    "neptun", "нептун",
+    "argus", "аргус",
+    "autora", "аврора",
+    "bolid", "болид",
+    "rubezh", "рубеж",
+    "hikvision", "dahua",
 }
+
+
+# ===== НОВОЕ v11: аналоги брендов, ушедших из РФ =====
+BRAND_ALIASES = {
+    "legrand": "iek",
+    "леgrand": "iek",
+    "ле": "iek",
+    "schneider": "iek",
+    "шнайдер": "iek",
+    "abb": "iek",
+    "абб": "iek",
+}
+
+
+# ===== Признаки «заказной сборки» =====
+CUSTOM_ASSEMBLY_KEYWORDS = [
+    "заказная сборка", "грщ", "шшр", "вру", "впу",
+    "главный распределительный", "шкаф шинный",
+]
+
+
+def is_custom_assembly(name):
+    if not name:
+        return False
+    n = name.lower()
+    return any(w in n for w in CUSTOM_ASSEMBLY_KEYWORDS)
 
 
 def normalize_cable(name):
@@ -61,16 +98,66 @@ def extract_keywords(name, model, code):
         if len(c_clean) >= 3:
             keywords.append(c_clean)
 
+    model_str = ""
     if model and str(model).lower() not in ("nan", ""):
         m = str(model).strip()
         if not re.match(r"^(ГОСТ|DIN|ТУ)\s", m, re.IGNORECASE):
             if len(m) >= 3:
+                model_str = m
                 keywords.append(m)
 
     keywords.extend(normalize_cable(name))
 
     for m in re.findall(r"\b[A-Za-z]{2,6}-\d{4,}\b", name):
         keywords.append(m.strip())
+
+    name_lower = name.lower()
+    type_words = [
+        ("розетка", "розетка"), ("выключатель", "выключатель"),
+        ("переключатель", "переключатель"), ("светильник", "светильник"),
+        ("люстра", "люстра"), ("датчик", "датчик"),
+        ("контроллер", "контроллер"), ("извещатель", "извещатель"),
+        ("оповещатель", "оповещатель"), ("табло", "табло"),
+        ("сирена", "сирена"), ("прибор", "прибор"),
+        ("панель", "панель"), ("блок", "блок"),
+        ("кабель", "кабель"), ("провод", "провод"),
+        ("автомат", "автомат"), ("счетчик", "счетчик"),
+        ("трансформатор", "трансформатор"), ("ограничитель", "ограничитель"),
+        ("лючок", "лючок"), ("лента", "лента"), ("муфта", "муфта"),
+        ("щит", "щит"), ("шкаф", "шкаф"), ("труба", "труба"),
+        ("лоток", "лоток"), ("короб", "короб"), ("коробка", "коробка"),
+        ("наконечник", "наконечник"), ("полоса", "полоса"),
+        ("уголок", "уголок"), ("шпилька", "шпилька"),
+        ("болт", "болт"), ("гайка", "гайка"), ("шайба", "шайба"),
+        ("саморез", "саморез"), ("дюбель", "дюбель"),
+        ("пена", "пена"), ("кожух", "кожух"), ("скоба", "скоба"),
+        ("аккумулятор", "аккумулятор"), ("батарея", "батарея"),
+    ]
+    device_type = None
+    for tw, canonical in type_words:
+        if tw in name_lower:
+            device_type = canonical
+            break
+
+    extras = []
+    for e in ["IP44", "IP22", "IP20", "IP31", "IP54", "IP56", "IP67"]:
+        if e.lower() in name_lower:
+            extras.append(e)
+    for e in ["трехфазная", "проходной", "двухклавишный", "одноклавишный",
+              "влагостойкая", "двойная", "TV", "интернет", "напольный",
+              "огнестойкий", "силовой", "низкотоксичный",
+              "радиоканальный", "адресный", "дымовой", "тепловой",
+              "ручной", "звуковой", "речевой", "световой"]:
+        if e.lower() in name_lower:
+            extras.append(e)
+
+    if device_type:
+        combined = device_type
+        if model_str:
+            combined += " " + model_str
+        if extras:
+            combined += " " + " ".join(extras[:2])
+        keywords.insert(0, combined)
 
     seen = set()
     out = []
@@ -84,43 +171,64 @@ def extract_keywords(name, model, code):
 
 
 def get_vendor(vendor_raw):
-    """
-    Возвращает бренд ТОЛЬКО если он из STRICT_BRANDS.
-    Для остальных — None (не проверяем бренд, ищем аналог).
-    """
+    """Возвращает бренд из STRICT_BRANDS, заменяя на аналог через BRAND_ALIASES."""
     if pd.isna(vendor_raw):
         return None
     v = str(vendor_raw).strip().strip('"').strip("'").strip()
     if not v or v.lower() in ("nan", "none", "null"):
         return None
-    if len(v) > 25:
+    if len(v) > 30:
         return None
     v_norm = re.sub(r"[\s\-_\.\(\)\"']", "", v.lower())
     if v_norm not in STRICT_BRANDS:
         return None
-    return v
+    # НОВОЕ v11: заменяем на аналог
+    return BRAND_ALIASES.get(v_norm, v)
 
 
 def search_fast(query, keywords, expected_brand=None):
+    """НОВОЕ v11: fallback без бренда, если с брендом 0."""
     results = []
     try:
-        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand)
+        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100)
         if r.get("found"):
             results.append({"source": "ЭТМ", **r})
     except Exception as e:
         log.warning("ЭТМ: %s", e)
+
+    # Fallback: если с брендом 0 — пробуем без бренда
+    if not results and expected_brand:
+        try:
+            log.info("    → fallback без бренда")
+            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100)
+            if r.get("found"):
+                results.append({"source": "ЭТМ", **r})
+        except Exception as e:
+            log.warning("ЭТМ (fallback): %s", e)
+
     return results
 
 
 def search_full(query, keywords, expected_brand=None):
+    """НОВОЕ v11: fallback без бренда."""
     results = []
 
     try:
-        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand)
+        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100)
         if r.get("found"):
             results.append({"source": "ЭТМ", **r})
     except Exception as e:
         log.warning("ЭТМ: %s", e)
+
+    # Fallback: если с брендом 0 — пробуем без бренда
+    if not results and expected_brand:
+        try:
+            log.info("    → fallback без бренда")
+            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100)
+            if r.get("found"):
+                results.append({"source": "ЭТМ", **r})
+        except Exception as e:
+            log.warning("ЭТМ (fallback): %s", e)
 
     try:
         r = petrovich.find_best(query, keywords=keywords)
@@ -200,8 +308,7 @@ def main():
         vendor_raw = r["Завод"]
         expected_brand = get_vendor(vendor_raw)
 
-        log.info("[%s] %s | %s | %s %s",
-                 pos, name[:60], model[:20], qty, unit)
+        log.info("[%s] %s | %s | %s %s", pos, name[:60], model[:20], qty, unit)
 
         if qty is None or not unit:
             log.info("    → пропуск (нет кол-ва или ед.)")
@@ -215,7 +322,7 @@ def main():
             })
             continue
 
-        if section in SKIP_SECTIONS:
+        if is_custom_assembly(name):
             log.info("    → заказная сборка, пропуск")
             rows.append({
                 "Позиция": pos, "Раздел": section,
