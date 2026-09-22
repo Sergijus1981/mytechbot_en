@@ -28,7 +28,7 @@ PROXY_SECRET = os.getenv("ETM_PROXY_SECRET", "").strip()
 # НОВОЕ: слова-исключения —配件, не сам товар
 EXCLUDE_WORDS = [
     "драйвер", "блок питания", "источник питания", "led driver",
-    "底座", "патрон", "провод", "кабель", "клемм", "разъем",
+    "патрон", "клемм", "разъем",
     "адаптер", "переходник", "заглушка",
     # аксессуары (не сам товар)
     "монтажный набор", "монтажный комплект", "крепление", "кронштейн",
@@ -276,15 +276,36 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
     - Берёт средний по цене
     """
     queries_to_try = []
-    # НОВОЕ: сначала полное имя — оно точнее keywords
-    if query:
+    # НОВОЕ: сначала полное имя, но только если оно информативно (>= 8 символов)
+    if query and len(query.strip()) >= 8:
         queries_to_try.append(query)
     if keywords:
-        sorted_kw = sorted([k for k in keywords if k and len(k) >= 3],
-                           key=len, reverse=True)
+        # Сортируем: сначала с большой буквы или с цифрами (артикулы), потом короткие
+        sorted_kw = sorted([k for k in keywords if k and len(k) >= 4],
+                           key=lambda x: (not x[0].isupper(), -len(x)))
         for k in sorted_kw:
             if k not in queries_to_try:
                 queries_to_try.append(k)
+    # Если ничего не набралось — пробуем короткое query
+    if not queries_to_try and query:
+        queries_to_try.append(query)
+    # НОВОЕ: ЭТМ использует точку в сечениях (2х2х0.75), а не запятую
+    # Добавляем ОБА варианта — с точкой и с запятой
+    expanded = []
+    for q in queries_to_try:
+        if "," in q:
+            expanded.append(q.replace(",", "."))
+        elif "." in q and any(c.isdigit() for c in q):
+            expanded.append(q.replace(".", ","))
+        expanded.append(q)
+    # Уникализируем, сохраняя порядок
+    seen_q = set()
+    queries_to_try = []
+    for q in expanded:
+        if q not in seen_q:
+            seen_q.add(q)
+            queries_to_try.append(q)
+    # Строка удалена — замену делает блок выше (expanded)
 
     if not queries_to_try:
         return {"found": False, "reason": "no queries"}
