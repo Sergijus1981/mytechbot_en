@@ -47,6 +47,10 @@ if SMETY_DIR not in sys.path:
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+import logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 PHOTO_DB_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/photo_db.zip"
 ETALONS_URL = "https://github.com/Sergijus1981/mytechbot/releases/download/v1.0.0/etalons.zip"
 
@@ -1351,7 +1355,7 @@ def _run_smeta_pipeline_sync(pdf_path, out_dir):
         "materials_total": _get_val("Итого материалы"),
         "works_total": _get_val("Итого работы"),
         "vat_total": _get_val("НДС"),
-        "grand_total": _get_val("ВСЕГО"),
+        "grand_total": _get_val("ВСЕГО") or _get_val("подытог") + _get_val("НДС"),
     }
 
 
