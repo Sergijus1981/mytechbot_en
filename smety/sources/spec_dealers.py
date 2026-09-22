@@ -46,6 +46,31 @@ DEALERS = [
         "search": "https://planetasveta.pro/search/?q={q}",
         "price_pattern": r"(\d[\d\s]{2,10}[,.]\d{2})\s*руб",
     },
+    {
+        "name": "RESanteh",
+        "search": "https://resanteh.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
+    },
+    {
+        "name": "Teploluxe",
+        "search": "https://teploluxe.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
+    },
+    {
+        "name": "ELAB",
+        "search": "https://elab.com.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
+    },
+    {
+        "name": "ChipDip",
+        "search": "https://www.chipdip.ru/search?searchtext={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
+    },
+    {
+        "name": "Rusklimat B2B",
+        "search": "https://b2b.rusklimat.com/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
+    },
 ]
 
 HOMOGLYPHS_LAT2CYR = str.maketrans({
