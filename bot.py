@@ -15,6 +15,8 @@ import time
 import re
 import sys
 import asyncio
+import hashlib
+import random
 from datetime import timedelta
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
@@ -1375,7 +1377,10 @@ def _get_free_part_text(smeta_materials_path, lang):
         return "Не удалось найти цены."
 
     free_count = max(1, int(total_items * 0.33))
-    free_df = df_items.head(free_count)
+    _key = hashlib.md5("|".join(sorted(df_items["Наименование"].astype(str))).encode("utf-8")).hexdigest()
+    _rng = random.Random(int(_key[:8], 16))
+    _idx = sorted(_rng.sample(range(total_items), free_count))
+    free_df = df_items.iloc[_idx]
 
     lines = []
     for i, (_, r) in enumerate(free_df.iterrows(), 1):
