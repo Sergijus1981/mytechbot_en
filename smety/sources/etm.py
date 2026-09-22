@@ -303,24 +303,28 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
             if filtered:
                 results = filtered
 
-        # Собираем ВСЕ подходящие товары
+        # Собираем ВСЕ подходящие товары (2 прохода: с брендом, потом без)
         candidates = []
+        candidates_no_brand = []
         for r in results:
             time.sleep(PAUSE)
             product = get_product(r["url"])
             if not product.get("price"):
                 continue
-
-            if expected_brand and not _brand_matches(expected_brand, product.get("brand")):
+            if _is_excluded(product.get("name")):
                 continue
-
             if keywords:
                 if not any(_key_matches_product(k, product) for k in keywords):
                     continue
+            brand_ok = (not expected_brand) or _brand_matches(expected_brand, product.get("brand"))
+            if brand_ok:
+                candidates.append(product)
+            else:
+                candidates_no_brand.append(product)
 
-            if _is_excluded(product.get("name")):
-                continue
-            candidates.append(product)
+        # Если с брендом мало — добираем без бренда
+        if len(candidates) < 2 and candidates_no_brand:
+            candidates.extend(candidates_no_brand[:5])
 
         if not candidates:
             continue

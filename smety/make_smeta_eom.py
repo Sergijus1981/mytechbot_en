@@ -157,7 +157,10 @@ def extract_keywords(name, model, code):
             combined += " " + model_str
         if extras:
             combined += " " + " ".join(extras[:2])
-        keywords.insert(0, combined)
+        full_name = name.strip()[:60]
+        if full_name and full_name.lower() != combined.lower():
+            keywords.insert(0, full_name)
+        keywords.insert(1, combined)
 
     seen = set()
     out = []
