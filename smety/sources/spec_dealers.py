@@ -71,6 +71,21 @@ DEALERS = [
         "search": "https://b2b.rusklimat.com/search/?q={q}",
         "price_pattern": r"(\d[\d\s]{2,10})[\s,.]*(?:₽|руб)",
     },
+    {
+        "name": "ТД ТИНКО",
+        "search": "https://www.tinko.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[,.]?\d{0,2}\s*(?:₽|руб|/шт)",
+    },
+    {
+        "name": "Тинко-СБ",
+        "search": "https://tinko-sb.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[,.]?\d{0,2}\s*(?:₽|руб|р\.)",
+    },
+    {
+        "name": "ЛУИС+",
+        "search": "https://luis.ru/search/?q={q}",
+        "price_pattern": r"(\d[\d\s]{2,10})[,.]?\d{0,2}\s*(?:₽|руб)",
+    },
 ]
 
 HOMOGLYPHS_LAT2CYR = str.maketrans({
