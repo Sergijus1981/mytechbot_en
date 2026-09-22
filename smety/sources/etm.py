@@ -25,6 +25,24 @@ PAUSE = 0.3
 PROXY_URL = os.getenv("ETM_PROXY_URL", "").strip()
 PROXY_SECRET = os.getenv("ETM_PROXY_SECRET", "").strip()
 
+# НОВОЕ: слова-исключения —配件, не сам товар
+EXCLUDE_WORDS = [
+    "драйвер", "блок питания", "источник питания", "led driver",
+    "底座", "патрон", "провод", "кабель", "клемм", "разъем",
+    "адаптер", "переходник", "заглушка",
+]
+
+# НОВОЕ: для светильников — минимальная цена выше
+LIGHT_KEYWORDS = ["светильник", "led", "лампа", "прожектор", "panel"]
+LIGHT_MIN_PRICE = 300
+
+
+def _is_excluded(name):
+    if not name:
+        return False
+    n = name.lower()
+    return any(w in n for w in EXCLUDE_WORDS)
+
 
 def _get(url):
     if PROXY_URL and PROXY_SECRET:
@@ -291,13 +309,18 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
                 if not any(_key_matches_product(k, product) for k in keywords):
                     continue
 
+            if _is_excluded(product.get("name")):
+                continue
             candidates.append(product)
 
         if not candidates:
             continue
 
         # Фильтр по минимальной цене (исключает механизмы/рамки)
-        filtered_by_price = [c for c in candidates if c["price"] >= min_price]
+        effective_min = min_price
+        if any(k in query.lower() for k in LIGHT_KEYWORDS):
+            effective_min = max(min_price, LIGHT_MIN_PRICE)
+        filtered_by_price = [c for c in candidates if c["price"] >= effective_min]
         if filtered_by_price:
             candidates = filtered_by_price
 
