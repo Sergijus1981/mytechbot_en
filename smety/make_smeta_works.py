@@ -1,10 +1,9 @@
 """
-make_smeta_works.py v3 (ФИНАЛ)
-Считает электромонтажные работы по спецификации ЭОМ.
-Учитывает: коэффициенты условий, повороты, оконечку, НДС.
-
-Вход:  smeta_eom_materials.xlsx (из make_smeta_eom.py)
-Выход: smeta_eom_full.xlsx (материалы + работы + итого)
+make_smeta_works.py v9
+Расчёт работ по спецификации.
+- Захардкоженные цены (кабели, лотки, щиты, муфты) — для ЭОМ 2.3
+- НОВОЕ: WORKS_PRICES — расценки по ключевым словам для любых позиций
+- Монтаж розеток, выключателей, светильников, извещателей, оповещателей
 """
 import re
 import logging
@@ -15,30 +14,24 @@ import pandas as pd
 IN_XLSX = Path("smeta_eom_materials.xlsx")
 OUT_XLSX = Path("smeta_eom_full.xlsx")
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 log = logging.getLogger("make_smeta_works")
 
 
-# ===== НАЦЕНКИ =====
-MARKUP_MATERIALS = 0.20   # +20% на материалы
-MARKUP_WORKS = 0.15       # +15% на работы
+MARKUP_MATERIALS = 0.20
+MARKUP_WORKS = 0.15
 
-# ===== КОЭФФИЦИЕНТЫ УСЛОВИЙ РАБОТ =====
-COEF_HEIGHT = 1.30        # высота 9 м
-COEF_ACTIVE = 1.15        # действующий объект
-COEF_NIGHT = 1.40         # ночные работы
-COEF_TOTAL = COEF_HEIGHT * COEF_ACTIVE * COEF_NIGHT   # = 2.093
+COEF_HEIGHT = 1.30
+COEF_ACTIVE = 1.15
+COEF_NIGHT = 1.40
+COEF_TOTAL = COEF_HEIGHT * COEF_ACTIVE * COEF_NIGHT
 
-# ===== НДС =====
 VAT = 0.20
-
-# ===== ДОПОЛНИТЕЛЬНЫЕ РАБОТЫ =====
-COEF_TURNS = 0.07         # +7% на повороты
-FEE_CABLE_TERMINATION = 150_000   # оконечка кабелей, укрупнённо
+COEF_TURNS = 0.07
+FEE_CABLE_TERMINATION = 150_000
 
 
-# ===== РАСЦЕНКИ НА РАБОТЫ =====
+# ===== Захардкоженные цены (для ЭОМ 2.3) =====
 CABLE_PRICES = {
     "1х240": 585, "1х185": 530, "1х120": 530, "1х95": 530, "1х70": 365,
     "5х35": 255, "5х25": 255, "5х16": 190, "5х10": 127, "5х6": 127,
@@ -68,6 +61,80 @@ COUPLING_PRICES = {
 PULL_PRICE = 70
 
 
+# ===== НОВОЕ: расценки по ключевым словам =====
+WORKS_PRICES = [
+    # (ключ в наименовании, расценка, название работы)
+    ("розетк", 400, "Монтаж розетки"),
+    ("выключател", 400, "Монтаж выключателя"),
+    ("переключател", 400, "Монтаж переключателя"),
+    ("светильник", 600, "Монтаж светильника"),
+    ("люстра", 800, "Монтаж люстры"),
+    ("лючок", 1500, "Монтаж лючка напольного"),
+    ("лента светодиод", 300, "Монтаж светодиодной ленты"),
+    ("блок питания", 500, "Монтаж блока питания"),
+
+    # Слаботочка
+    ("извещател", 300, "Монтаж извещателя"),
+    ("оповещател", 400, "Монтаж оповещателя"),
+    ("табло", 400, "Монтаж табло"),
+    ("сирена", 400, "Монтаж сирены"),
+    ("орфей", 500, "Монтаж речевого оповещателя"),
+    ("прибор приемно", 3000, "Монтаж прибора приемно-контрольного"),
+    ("панель-", 3000, "Монтаж панели"),
+    ("контроллер", 1500, "Монтаж контроллера"),
+    ("программатор", 1000, "Монтаж программатора"),
+    ("блок индикации", 1000, "Монтаж блока индикации"),
+    ("блок исполнительн", 800, "Монтаж исполнительного блока"),
+    ("аккумулятор", 300, "Монтаж АКБ"),
+    ("скоба", 200, "Монтаж скобы"),
+
+    # Кабели, трубы, лотки
+    ("кабель", 100, "Прокладка кабеля"),
+    ("провод", 80, "Прокладка провода"),
+    ("труба", 50, "Прокладка трубы"),
+    ("лоток", 200, "Монтаж лотка"),
+    ("короб", 150, "Монтаж короба"),
+    ("мини-канал", 100, "Монтаж мини-канала"),
+    ("гофр", 50, "Прокладка гофры"),
+    ("держател", 100, "Монтаж держателя"),
+    ("дюбель", 30, "Монтаж дюбеля"),
+    ("саморез", 10, "Монтаж самореза"),
+
+    # Автоматы, щиты
+    ("автомат", 300, "Монтаж автомата"),
+    ("дифавтомат", 500, "Монтаж дифавтомата"),
+    ("узо", 500, "Монтаж УЗО"),
+    ("счетчик", 1500, "Монтаж счетчика"),
+    ("трансформатор", 800, "Монтаж трансформатора"),
+    ("рубильник", 500, "Монтаж рубильника"),
+    ("ограничитель", 500, "Монтаж ОПН"),
+    ("щит", 5000, "Монтаж щита"),
+    ("шкаф", 5000, "Монтаж шкафа"),
+    ("щит питания", 5000, "Монтаж щита питания"),
+    ("наконечник", 50, "Монтаж наконечника"),
+    ("болт", 30, "Монтаж болта"),
+    ("гайка", 20, "Монтаж гайки"),
+    ("шайба", 10, "Монтаж шайбы"),
+    ("шпильк", 50, "Монтаж шпильки"),
+    ("полоса", 150, "Монтаж полосы"),
+    ("уголок", 150, "Монтаж уголка"),
+    ("коробка", 200, "Монтаж коробки"),
+    ("пена", 500, "Огнестойкая пена"),
+    ("кожух", 300, "Монтаж кожуха"),
+]
+
+
+def find_work_price(name):
+    """Ищет расценку по ключевому слову в наименовании."""
+    if not name:
+        return None, None
+    n = name.lower()
+    for key, price, work_name in WORKS_PRICES:
+        if key in n:
+            return price, work_name
+    return None, None
+
+
 def parse_cable_section(name):
     m = re.search(r"(\d+)\s*[хx]\s*(\d+)(?:[,.](\d+))?", name)
     if not m:
@@ -86,7 +153,9 @@ def parse_tray_section(name):
 
 def calc_works(df):
     works = []
+    used_pos = set()
 
+    # 1. Захардкоженные работы (приоритет)
     for _, r in df.iterrows():
         pos = str(r["Позиция"])
         name = str(r["Наименование"])
@@ -97,62 +166,66 @@ def calc_works(df):
         if qty is None:
             continue
 
-        if section == "Кабельная продукция" and name.startswith("ППГнг"):
+        added = False
+
+        if section == "Кабельная продукция" and name.startswith("ППГ"):
             sec = parse_cable_section(name)
             if sec and sec in CABLE_PRICES:
                 rate = CABLE_PRICES[sec]
                 works.append({
-                    "Позиция": pos,
-                    "Работа": f"Прокладка кабеля {sec}",
+                    "Позиция": pos, "Работа": f"Прокладка кабеля {sec}",
                     "Ед.": "м", "Объём": qty,
-                    "Расценка, руб": rate,
-                    "Сумма, руб": round(rate * qty, 2),
+                    "Расценка, руб": rate, "Сумма, руб": round(rate * qty, 2),
                 })
+                used_pos.add(pos)
+                added = True
 
         elif section == "Кабеленесущая продукция" and "лоток" in name.lower():
             sec = parse_tray_section(name)
             if sec and sec in TRAY_PRICES:
                 rate = TRAY_PRICES[sec]
                 works.append({
-                    "Позиция": pos,
-                    "Работа": f"Монтаж лотка {sec}",
+                    "Позиция": pos, "Работа": f"Монтаж лотка {sec}",
                     "Ед.": "м", "Объём": qty,
-                    "Расценка, руб": rate,
-                    "Сумма, руб": round(rate * qty, 2),
+                    "Расценка, руб": rate, "Сумма, руб": round(rate * qty, 2),
                 })
+                used_pos.add(pos)
+                added = True
 
-        elif section == "Электрощитовое оборудование":
+        elif section == "Щитовое оборудование":
             m = model.strip()
             if m in PANEL_PRICES:
                 rate = PANEL_PRICES[m]
                 works.append({
-                    "Позиция": pos,
-                    "Работа": f"Монтаж щита {m}",
+                    "Позиция": pos, "Работа": f"Монтаж щита {m}",
                     "Ед.": "шт", "Объём": qty,
-                    "Расценка, руб": rate,
-                    "Сумма, руб": round(rate * qty, 2),
+                    "Расценка, руб": rate, "Сумма, руб": round(rate * qty, 2),
                 })
+                used_pos.add(pos)
+                added = True
 
         elif "муфта кабельная" in name.lower():
             for key, rate in COUPLING_PRICES.items():
                 if key in name:
                     works.append({
-                        "Позиция": pos,
-                        "Работа": f"Монтаж муфты {key}",
+                        "Позиция": pos, "Работа": f"Монтаж муфты {key}",
                         "Ед.": "шт", "Объём": qty,
-                        "Расценка, руб": rate,
-                        "Сумма, руб": round(rate * qty, 2),
+                        "Расценка, руб": rate, "Сумма, руб": round(rate * qty, 2),
                     })
+                    used_pos.add(pos)
+                    added = True
                     break
 
-        elif "труба гофрированная" in name.lower() and r["Ед."] == "м":
-            works.append({
-                "Позиция": pos,
-                "Работа": "Затяжка кабеля в гофротрубу",
-                "Ед.": "м", "Объём": qty,
-                "Расценка, руб": PULL_PRICE,
-                "Сумма, руб": round(PULL_PRICE * qty, 2),
-            })
+        # Если не добавили захардкоженное — пробуем WORKS_PRICES
+        if not added:
+            rate, work_name = find_work_price(name)
+            if rate and work_name:
+                works.append({
+                    "Позиция": pos, "Работа": work_name,
+                    "Ед.": r["Ед."] if pd.notna(r["Ед."]) else "шт",
+                    "Объём": qty,
+                    "Расценка, руб": rate, "Сумма, руб": round(rate * qty, 2),
+                })
 
     return works
 
@@ -166,7 +239,6 @@ def main():
     df = pd.read_excel(IN_XLSX, dtype={"Позиция": str, "Код": str})
     log.info("Позиций: %d", len(df))
 
-    # материалы — без строки ИТОГО
     df_no_total = df[df["Раздел"] != "ИТОГО"]
     if "Сумма, руб" in df_no_total.columns:
         m = pd.to_numeric(df_no_total["Сумма, руб"], errors="coerce").fillna(0)
@@ -176,59 +248,42 @@ def main():
 
     log.info("Материалы (без наценки): %.2f руб", materials_total)
 
-    # работы — базовые
     works = calc_works(df_no_total)
-    log.info("Найдено работ (позиций): %d", len(works))
+    log.info("Найдено работ: %d", len(works))
     works_base = sum(w["Сумма, руб"] for w in works)
     log.info("Работы (база): %.2f руб", works_base)
 
-    # применяем коэффициенты и повороты
     works_with_coef = works_base * COEF_TOTAL
-    log.info("× Коэффициенты (высота×активный×ночь = %.3f): %.2f руб",
-             COEF_TOTAL, works_with_coef)
-
     turns_amount = works_with_coef * COEF_TURNS
     works_with_turns = works_with_coef + turns_amount
-    log.info("+ Повороты (%.0f%%): %.2f руб", COEF_TURNS * 100, works_with_turns)
-
     works_with_termination = works_with_turns + FEE_CABLE_TERMINATION
-    log.info("+ Оконечка кабелей: %.2f руб", works_with_termination)
-
     works_markup = works_with_termination * MARKUP_WORKS
     works_total = works_with_termination + works_markup
-    log.info("+15%% наценка на работы: %.2f руб", works_markup)
-    log.info("Итого работы: %.2f руб", works_total)
 
-    # материалы с наценкой
     materials_markup = materials_total * MARKUP_MATERIALS
     materials_with_markup = materials_total + materials_markup
-    log.info("Материалы +20%% наценка: %.2f руб", materials_with_markup)
 
-    # подытог
     subtotal = materials_with_markup + works_total
-    log.info("Подытог (материалы+работы): %.2f руб", subtotal)
-
-    # НДС
     vat_amount = subtotal * VAT
     grand_total = subtotal + vat_amount
-    log.info("НДС 20%%: %.2f руб", vat_amount)
 
-    log.info("=====================================")
-    log.info("=== ИТОГО С НДС: %.2f руб ===", grand_total)
-    log.info("=====================================")
+    log.info("Материалы с наценкой: %.2f", materials_with_markup)
+    log.info("Работы с наценкой: %.2f", works_total)
+    log.info("Подытог: %.2f", subtotal)
+    log.info("НДС 20%%: %.2f", vat_amount)
+    log.info("=== ВСЕГО С НДС: %.2f ===", grand_total)
 
-    # ===== Сохранение в Excel с листами =====
     with pd.ExcelWriter(OUT_XLSX, engine="openpyxl") as writer:
-        # --- Лист 1: Материалы ---
         materials_rows = []
         for _, r in df.iterrows():
             materials_rows.append({
                 "Позиция": r["Позиция"], "Раздел": r["Раздел"],
                 "Наименование": r["Наименование"], "Ед.": r["Ед."],
                 "Кол-во": r["Кол-во"],
-                "Цена ед., руб": r["Цена ед., руб"],
-                "Сумма, руб": r["Сумма, руб"],
-                "Источник": r["Источник"], "Статус": r["Статус"],
+                "Цена ед., руб": r["Цена ед., руб"] if "Цена ед., руб" in r else "",
+                "Сумма, руб": r["Сумма, руб"] if "Сумма, руб" in r else "",
+                "Источник": r.get("Источник", ""),
+                "Статус": r.get("Статус", ""),
             })
         materials_rows.append({
             "Позиция": "", "Раздел": "ИТОГО материалы (без наценки)",
@@ -250,17 +305,14 @@ def main():
         })
         pd.DataFrame(materials_rows).to_excel(writer, sheet_name="Материалы", index=False)
 
-        # --- Лист 2: Работы ---
         works_rows = list(works)
-
-        # добавляем строки коэффициентов и доп. работ
         works_rows.append({
             "Позиция": "", "Работа": "ИТОГО работы (база)",
             "Ед.": "", "Объём": "", "Расценка, руб": "",
             "Сумма, руб": round(works_base, 2),
         })
         works_rows.append({
-            "Позиция": "", "Работа": f"× Коэффициент условий (высота×активный×ночь = {COEF_TOTAL:.3f})",
+            "Позиция": "", "Работа": f"× Коэффициент условий ({COEF_TOTAL:.3f})",
             "Ед.": "", "Объём": "", "Расценка, руб": "",
             "Сумма, руб": round(works_with_coef, 2),
         })
@@ -286,28 +338,21 @@ def main():
         })
         pd.DataFrame(works_rows).to_excel(writer, sheet_name="Работы", index=False)
 
-        # --- Лист 3: Сводка ---
         summary_rows = [
             {"Статья": "МАТЕРИАЛЫ", "Сумма, руб": ""},
             {"Статья": "Материалы (без наценки)", "Сумма, руб": round(materials_total, 2)},
             {"Статья": "Наценка на материалы (20%)", "Сумма, руб": round(materials_markup, 2)},
             {"Статья": "Итого материалы", "Сумма, руб": round(materials_with_markup, 2)},
             {"Статья": "", "Сумма, руб": ""},
-
             {"Статья": "РАБОТЫ", "Сумма, руб": ""},
             {"Статья": "Работы (база)", "Сумма, руб": round(works_base, 2)},
-            {"Статья": f"Коэффициенты условий (×{COEF_TOTAL:.3f})",
-             "Сумма, руб": round(works_with_coef, 2)},
-            {"Статья": f"Повороты (+{int(COEF_TURNS*100)}%)",
-             "Сумма, руб": round(works_with_turns, 2)},
-            {"Статья": "Оконечка кабелей (укрупнённо)",
-             "Сумма, руб": round(FEE_CABLE_TERMINATION, 2)},
-            {"Статья": "Итого работы (до наценки)",
-             "Сумма, руб": round(works_with_termination, 2)},
+            {"Статья": f"Коэффициенты условий (×{COEF_TOTAL:.3f})", "Сумма, руб": round(works_with_coef, 2)},
+            {"Статья": f"Повороты (+{int(COEF_TURNS*100)}%)", "Сумма, руб": round(works_with_turns, 2)},
+            {"Статья": "Оконечка кабелей (укрупнённо)", "Сумма, руб": round(FEE_CABLE_TERMINATION, 2)},
+            {"Статья": "Итого работы (до наценки)", "Сумма, руб": round(works_with_termination, 2)},
             {"Статья": "Наценка на работы (15%)", "Сумма, руб": round(works_markup, 2)},
             {"Статья": "Итого работы", "Сумма, руб": round(works_total, 2)},
             {"Статья": "", "Сумма, руб": ""},
-
             {"Статья": "ИТОГО ПО СМЕТЕ", "Сумма, руб": ""},
             {"Статья": "Материалы + Работы (подытог)", "Сумма, руб": round(subtotal, 2)},
             {"Статья": "НДС 20%", "Сумма, руб": round(vat_amount, 2)},
