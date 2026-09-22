@@ -1,8 +1,8 @@
 """
-sources/etm.py
+sources/etm.py v2
 Парсер ЭТМ (etm.ru) через curl_cffi + Schema.org.
-Цена берётся из HTML — ГЛАВНАЯ цена товара.
-Поддержка прокси через Cloudflare Tunnel.
+- НОВОЕ в v2: find_best собирает все результаты, фильтрует по min_price,
+  берёт средний по цене.
 """
 import os
 import re
@@ -220,7 +220,14 @@ def _key_matches_product(key, product):
     return False
 
 
-_BRAND_CANON = {"дкс": "dkc", "иэк": "iek", "екф": "ekf", "квт": "kvt"}
+_BRAND_CANON = {
+    "дкс": "dkc", "иэк": "iek", "екф": "ekf", "квт": "kvt",
+    "legrand": "legrand", "леgrand": "legrand", "ле": "legrand",
+    "abb": "abb", "абб": "abb",
+    "schneider": "schneider", "шнайдер": "schneider",
+    "neptun": "neptun", "нептун": "neptun",
+    "argus": "argus", "аргус": "argus",
+}
 
 
 def _brand_matches(expected_brand, product_brand):
@@ -237,7 +244,13 @@ def _brand_matches(expected_brand, product_brand):
     return e in p or p in e
 
 
-def find_best(query, keywords=None, expected_brand=None):
+def find_best(query, keywords=None, expected_brand=None, min_price=100):
+    """
+    Ищет ЛУЧШИЙ результат:
+    - Собирает все подходящие товары
+    - Фильтрует по min_price (исключает механизмы/рамки)
+    - Берёт средний по цене
+    """
     queries_to_try = []
     if keywords:
         sorted_kw = sorted([k for k in keywords if k and len(k) >= 3],
@@ -249,9 +262,7 @@ def find_best(query, keywords=None, expected_brand=None):
     if not queries_to_try:
         return {"found": False, "reason": "no queries"}
 
-    log.info("ETM: brand=%r, queries=%s", expected_brand, queries_to_try[:2])
-    if PROXY_URL:
-        log.info("ETM: using proxy %s", PROXY_URL)
+    log.info("ETM: brand=%r, min_price=%s, queries=%s", expected_brand, min_price, queries_to_try[:2])
 
     for q in queries_to_try:
         results = search(q, limit=8)
@@ -265,6 +276,8 @@ def find_best(query, keywords=None, expected_brand=None):
             if filtered:
                 results = filtered
 
+        # Собираем ВСЕ подходящие товары
+        candidates = []
         for r in results:
             time.sleep(PAUSE)
             product = get_product(r["url"])
@@ -278,21 +291,32 @@ def find_best(query, keywords=None, expected_brand=None):
                 if not any(_key_matches_product(k, product) for k in keywords):
                     continue
 
-            product["found"] = True
-            product["search_query"] = q
-            return product
+            candidates.append(product)
+
+        if not candidates:
+            continue
+
+        # Фильтр по минимальной цене (исключает механизмы/рамки)
+        filtered_by_price = [c for c in candidates if c["price"] >= min_price]
+        if filtered_by_price:
+            candidates = filtered_by_price
+
+        # Сортировка по цене
+        candidates.sort(key=lambda x: x["price"])
+
+        # Берём медиану (не самый дешёвый, не самый дорогой)
+        if len(candidates) == 1:
+            chosen = candidates[0]
+        elif len(candidates) == 2:
+            chosen = candidates[0]
+        else:
+            chosen = candidates[len(candidates) // 2]
+
+        chosen["found"] = True
+        chosen["search_query"] = q
+        chosen["candidates_count"] = len(candidates)
+        log.info("ETM: выбрано: %s | %s ₽ | кандидатов: %d",
+                 chosen.get("name", "")[:50], chosen["price"], len(candidates))
+        return chosen
 
     return {"found": False, "reason": "no match"}
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    print("--- Тест 1: держатель (ДКС) ---")
-    print(find_best("держатель оцинкованный 25мм", keywords=["53334"], expected_brand="ДКС"))
-
-    print("\n--- Тест 2: хомут 27616 (ДКС) ---")
-    print(find_best("хомут нерж 8х600", keywords=["27616"], expected_brand="ДКС"))
-
-    print("\n--- Тест 3: кабель 1х120 ---")
-    print(find_best("ППГнг(А)-HF 1х120", keywords=["ППГнг(А)-HF 1х120"]))
