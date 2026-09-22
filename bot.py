@@ -1343,6 +1343,9 @@ def _run_smeta_pipeline_sync(pdf_path, out_dir):
     df_full = pd.read_excel(smeta_full, sheet_name="Сводка")
 
     def _get_val(pat):
+        exact = df_full[df_full["Статья"].astype(str).str.strip() == pat]
+        if len(exact) > 0:
+            return _safe_float(exact["Сумма, руб"].iloc[0])
         row = df_full[df_full["Статья"].astype(str).str.contains(pat, na=False)]
         if len(row) == 0:
             return 0.0
