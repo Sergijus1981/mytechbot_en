@@ -276,12 +276,15 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
     - Берёт средний по цене
     """
     queries_to_try = []
+    # НОВОЕ: сначала полное имя — оно точнее keywords
+    if query:
+        queries_to_try.append(query)
     if keywords:
         sorted_kw = sorted([k for k in keywords if k and len(k) >= 3],
                            key=len, reverse=True)
-        queries_to_try.extend(sorted_kw)
-    if query and query not in queries_to_try:
-        queries_to_try.append(query)
+        for k in sorted_kw:
+            if k not in queries_to_try:
+                queries_to_try.append(k)
 
     if not queries_to_try:
         return {"found": False, "reason": "no queries"}
