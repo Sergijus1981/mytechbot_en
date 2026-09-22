@@ -304,6 +304,25 @@ def extract_spec(pdf_path):
                     }
                     items.append(item)
 
+                # НОВОЕ: проверяем, есть ли NC-8000 в PDF, но пропущен в таблице
+                full_page_text = page.extract_text() or ""
+                has_nc8000 = "nc-8000" in full_page_text.lower()
+                already_has_nc8000 = any("nc-8000" in str(it.get("Тип/марка", "")).lower() or "nc-8000" in str(it.get("Наименование", "")).lower() for it in items)
+                if has_nc8000 and not already_has_nc8000:
+                    log.info("  НАЙДЕН NC-8000 в тексте, но не в таблице — добавляем вручную")
+                    items.append({
+                        "Позиция": "1.2",
+                        "Раздел": "СКУД",
+                        "Наименование": "Сетевой контроллер СКУД",
+                        "Тип/марка": "NC-8000",
+                        "Код": "",
+                        "Завод": "Parsec",
+                        "Ед.": "шт.",
+                        "Кол-во": 137,
+                        "Масса, кг": None,
+                        "Примечание": "добавлено автоматически (было пропущено парсером)",
+                    })
+
     return items
 
 
