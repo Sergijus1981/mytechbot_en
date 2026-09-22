@@ -274,12 +274,13 @@ def extract_spec(pdf_path):
                         continue
 
                     pos = find_pos_in_row(row, cols)
-                    if not pos:
-                        continue
-
                     name = get_cell(row, cols.get("col_name"))
                     if not name or len(name) < 3:
                         continue
+                    if not pos:
+                        # Строка без позиции — берём, если есть имя
+                        log.info("  Строка без позиции: %s", name[:50])
+                        pos = ""
 
                     section_for_row = current_section
                     if not section_for_row:

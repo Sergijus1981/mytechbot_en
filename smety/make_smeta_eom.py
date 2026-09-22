@@ -56,6 +56,26 @@ BRAND_ALIASES = {
 
 
 # ===== Признаки «заказной сборки» =====
+# НОВОЕ: ручные цены для позиций, которых нет на ЭТМ
+MANUAL_PRICES = {
+    "nc-8000": 39576,        # Parsec NC-8000
+    "pr-x18": 23400,         # Parsec PR-X18
+    "er1602": 21500,         # ESMART Stone ER1602
+    "er1602 (stone)": 21500,
+    "esmart reader oem": 14000,  # ESMART Reader OEM
+    "esmart® reader серии oem": 14000,
+    "удп 513-3м исп.01": 950,   # Болид УДП 513-3М
+    "st-lr321": 60002,       # Smartec ST-LR321
+    "sma2": 34750,           # CAME SMA2
+    "ds-tmg4b0-ra(3m)": 120000,  # Hikvision шлагбаум 3м прав
+    "ds-tmg4b0-la(3m)": 120000,
+    "ds-tmg4b0-ra(6m)": 150000,
+    "st-rb002pd": 2146,      # Smartec фотоэлементы
+    "dtm 1207": 2011,        # Delta АКБ
+    "df24n1s": 12000,        # Acer монитор
+    "mk220": 1548,           # Logitech клавиатура
+}
+
 CUSTOM_ASSEMBLY_KEYWORDS = [
     "заказная сборка", "грщ", "шшр", "вру", "впу",
     "главный распределительный", "шкаф шинный",
@@ -346,6 +366,35 @@ def main():
 
         results = search_fast(name, keywords, expected_brand=expected_brand) if fast \
             else search_full(name, keywords, expected_brand=expected_brand)
+
+        # НОВОЕ: fallback на MANUAL_PRICES, если ничего не нашли
+        if not results:
+            _manual_key = None
+            # Проверяем имя, модель, артикул
+            for _cand in [name, model, code]:
+                if _cand:
+                    _k = str(_cand).strip().lower()
+                    if _k in MANUAL_PRICES:
+                        _manual_key = _k
+                        break
+            # Проверяем подстроки
+            if not _manual_key:
+                _all_text = f"{name} {model} {code}".lower()
+                for _k, _v in MANUAL_PRICES.items():
+                    if _k in _all_text:
+                        _manual_key = _k
+                        break
+            if _manual_key:
+                _price = MANUAL_PRICES[_manual_key]
+                results = [{
+                    "source": "Ручная",
+                    "found": True,
+                    "name": f"{name} (ручная цена)",
+                    "price": _price,
+                    "url": "",
+                    "brand": "",
+                }]
+                log.info("    MANUAL: %s → %s ₽", _manual_key, _price)
         log.info("    найдено: %d", len(results))
 
         price, source, url = pick_price(results)
