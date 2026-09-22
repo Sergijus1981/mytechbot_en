@@ -1425,6 +1425,9 @@ async def handle_smeta_pdf(update, context):
     user_dir = os.path.join(base_dir, str(user_id))
     os.makedirs(user_dir, exist_ok=True)
     pdf_path = os.path.join(user_dir, "spec.pdf")
+    project_name = doc.file_name.rsplit(".", 1)[0][:60] if doc.file_name else "Проект"
+    with open(os.path.join(user_dir, "project_name.txt"), "w", encoding="utf-8") as _pn:
+        _pn.write(project_name)
 
     await update.message.reply_text(
         "⏳ <b>Принял PDF.</b> Обрабатываю...\n\n"
@@ -1442,6 +1445,14 @@ async def handle_smeta_pdf(update, context):
         return
 
     asyncio.create_task(_run_smeta_task(update, context, user_id, lang, pdf_path, user_dir))
+
+
+def _project_name(user_dir):
+    try:
+        with open(os.path.join(user_dir, "project_name.txt"), encoding="utf-8") as f:
+            return f.read().strip() or "Проект"
+    except Exception:
+        return "Проект"
 
 
 async def _run_smeta_task(update, context, user_id, lang, pdf_path, user_dir):
@@ -1464,6 +1475,7 @@ async def _run_smeta_task(update, context, user_id, lang, pdf_path, user_dir):
 
         summary = (
             f"✅ <b>Смета готова!</b>\n\n"
+            f"📁 <b>Проект:</b> {_project_name(user_dir)}\n\n"
             f"📊 <b>Итого:</b>\n"
             f"• Материалы: <b>{_format_money(result['materials_total'])} ₽</b>\n"
             f"• Работы: <b>{_format_money(result['works_total'])} ₽</b>\n"
