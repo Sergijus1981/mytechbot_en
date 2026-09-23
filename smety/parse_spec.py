@@ -11,7 +11,12 @@ import re
 import logging
 from pathlib import Path
 
-import pymupdf
+try:
+    import pymupdf
+    HAS_PYMUPDF = True
+except ImportError:
+    import pdfplumber
+    HAS_PYMUPDF = False
 import pandas as pd
 
 PDF_PATH = Path("spec.pdf")
