@@ -25,20 +25,16 @@ PAUSE = 0.3
 PROXY_URL = os.getenv("ETM_PROXY_URL", "").strip()
 PROXY_SECRET = os.getenv("ETM_PROXY_SECRET", "").strip()
 
-# НОВОЕ: слова-исключения —配件, не сам товар
 EXCLUDE_WORDS = [
     "драйвер", "блок питания", "источник питания", "led driver",
     "патрон", "клемм", "разъем",
     "адаптер", "переходник", "заглушка",
-    # аксессуары (не сам товар)
     "монтажный набор", "монтажный комплект", "крепление", "кронштейн",
-    "брелок", "брелок", "комплект брелок", "заглушка",
+    "брелок", "комплект брелок",
     "набор для монтажа", "набор монтажный",
-    # расходники
     "саморез", "дюбель", "стяжка", "хомут", "маркер", "бирка",
 ]
 
-# НОВОЕ: для светильников — минимальная цена выше
 LIGHT_KEYWORDS = ["светильник", "led", "лампа", "прожектор", "panel"]
 LIGHT_MIN_PRICE = 300
 
@@ -273,24 +269,22 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
     Ищет ЛУЧШИЙ результат:
     - Собирает все подходящие товары
     - Фильтрует по min_price (исключает механизмы/рамки)
-    - Берёт средний по цене
+    - 1 кандидат → он
+    - 2 кандидата → дороже (запас, надёжность)
+    - 3+ кандидатов → медиана
     """
     queries_to_try = []
-    # НОВОЕ: сначала полное имя, но только если оно информативно (>= 8 символов)
     if query and len(query.strip()) >= 8:
         queries_to_try.append(query)
     if keywords:
-        # Сортируем: сначала с большой буквы или с цифрами (артикулы), потом короткие
         sorted_kw = sorted([k for k in keywords if k and len(k) >= 4],
                            key=lambda x: (not x[0].isupper(), -len(x)))
         for k in sorted_kw:
             if k not in queries_to_try:
                 queries_to_try.append(k)
-    # Если ничего не набралось — пробуем короткое query
     if not queries_to_try and query:
         queries_to_try.append(query)
-    # НОВОЕ: ЭТМ использует точку в сечениях (2х2х0.75), а не запятую
-    # Добавляем ОБА варианта — с точкой и с запятой
+
     expanded = []
     for q in queries_to_try:
         if "," in q:
@@ -298,14 +292,13 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
         elif "." in q and any(c.isdigit() for c in q):
             expanded.append(q.replace(".", ","))
         expanded.append(q)
-    # Уникализируем, сохраняя порядок
+
     seen_q = set()
     queries_to_try = []
     for q in expanded:
         if q not in seen_q:
             seen_q.add(q)
             queries_to_try.append(q)
-    # Строка удалена — замену делает блок выше (expanded)
 
     if not queries_to_try:
         return {"found": False, "reason": "no queries"}
@@ -324,7 +317,6 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
             if filtered:
                 results = filtered
 
-        # Собираем ВСЕ подходящие товары (2 прохода: с брендом, потом без)
         candidates = []
         candidates_no_brand = []
         for r in results:
@@ -343,14 +335,12 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
             else:
                 candidates_no_brand.append(product)
 
-        # Если с брендом мало — добираем без бренда
         if len(candidates) < 2 and candidates_no_brand:
             candidates.extend(candidates_no_brand[:5])
 
         if not candidates:
             continue
 
-        # Фильтр по минимальной цене (исключает механизмы/рамки)
         effective_min = min_price
         if any(k in query.lower() for k in LIGHT_KEYWORDS):
             effective_min = max(min_price, LIGHT_MIN_PRICE)
@@ -358,14 +348,12 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
         if filtered_by_price:
             candidates = filtered_by_price
 
-        # Сортировка по цене
         candidates.sort(key=lambda x: x["price"])
 
-        # Берём медиану (не самый дешёвый, не самый дорогой)
         if len(candidates) == 1:
             chosen = candidates[0]
         elif len(candidates) == 2:
-            chosen = candidates[0]
+            chosen = candidates[-1]
         else:
             chosen = candidates[len(candidates) // 2]
 
