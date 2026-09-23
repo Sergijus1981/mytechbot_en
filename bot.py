@@ -1422,8 +1422,8 @@ async def handle_smeta_pdf(update, context):
     if not doc or not doc.file_name.lower().endswith(".pdf"):
         return
 
-    if doc.file_size and doc.file_size > 20 * 1024 * 1024:
-        await update.message.reply_text("❌ Файл больше 20 МБ. Пришли PDF поменьше.")
+    if doc.file_size and doc.file_size > 50 * 1024 * 1024:
+        await update.message.reply_text("❌ Файл больше 50 МБ. Пришли PDF поменьше или разбей на части.")
         return
 
     base_dir = "/data/smeta_temp" if os.path.exists("/data") else "smeta_temp"
