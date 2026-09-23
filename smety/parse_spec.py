@@ -51,6 +51,29 @@ SECTIONS = [
 ]
 
 
+# НОВОЕ: словарь для исправления битой кодировки из pdfplumber/PyMuPDF
+FIX_CID = {
+    "ǟ": "Ц", "Ȅ": "ы", "ǲ": "й", "ǯ": "ж", "Ǚ": "Р",
+    "ǔ": "Ч", "Ȭ": "№", "ȁ": "ш", "Ȃ": "щ", "ȃ": "ъ",
+    "Ȇ": "э", "ȇ": "ю", "Ǎ": "Д", "Ǣ": "Ф", "Ǟ": "Х",
+    "ǽ": "ф", "Ǒ": "И", "ǋ": "В", "Ǧ": "Э", "Ǩ": "Я",
+    "ǉ": "А", "Ǌ": "Б", "ǚ": "С", "ǌ": "Л", "ǜ": "У",
+    "Ǘ": "О", "Ǡ": "0", "Ǹ": "З", "ǔ": "Ч",
+}
+
+
+def fix_cid(text):
+    """Исправляет битые CID-символы (cid:XXX) из PDF."""
+    if not text:
+        return text
+    # 1. Убираем (cid:XXX)
+    text = re.sub(r"\(cid:\d+\)", "", text)
+    # 2. Применяем словарь замен
+    for bad, good in FIX_CID.items():
+        text = text.replace(bad, good)
+    return text
+
+
 SPEC_MARKERS = [
     "спецификация оборудования",
     "спецификация электроустановочных",
@@ -252,7 +275,7 @@ def extract_spec(pdf_path):
             pages_to_parse = pdf.pages
 
         for pno, page in enumerate(pages_to_parse, 1):
-            page_text = (page.extract_text() or "").upper()
+            page_text = fix_cid((page.extract_text() or "")).upper()
             page_sections = []
             for key, label in SECTIONS:
                 if key in page_text:
@@ -328,7 +351,7 @@ def extract_spec(pdf_path):
                     items.append(item)
 
                 # НОВОЕ: проверяем, есть ли NC-8000 в PDF, но пропущен в таблице
-                full_page_text = page.extract_text() or ""
+                full_page_text = fix_cid(page.extract_text() or "")
                 has_nc8000 = "nc-8000" in full_page_text.lower()
                 already_has_nc8000 = any("nc-8000" in str(it.get("Тип/марка", "")).lower() or "nc-8000" in str(it.get("Наименование", "")).lower() for it in items)
                 if has_nc8000 and not already_has_nc8000:
