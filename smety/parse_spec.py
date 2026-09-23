@@ -204,6 +204,29 @@ def page_has_spec_table(page):
 
 def find_spec_pages(pdf):
     spec_pages = []
+    total = len(pdf.pages)
+    
+    # НОВОЕ: сначала ищем с КОНЦА (спецификация — обычно в конце РД)
+    for i in range(total - 1, max(-1, total - 15), -1):
+        page = pdf.pages[i]
+        text = page.extract_text() or ""
+        if page_has_strong_marker(text):
+            spec_pages.insert(0, i)
+            continue
+        if page_has_spec_table(page):
+            spec_pages.insert(0, i)
+        # нашли достаточно — стоп
+        if len(spec_pages) >= 3:
+            log.info("  Спецификация найдена с конца (стр. %s)", [p + 1 for p in spec_pages])
+            return spec_pages
+    
+    # Если с конца нашли хоть что-то — возвращаем
+    if spec_pages:
+        log.info("  Спецификация найдена с конца (стр. %s)", [p + 1 for p in spec_pages])
+        return spec_pages
+    
+    # Fallback: сканируем с начала (медленно, но если ничего не нашли)
+    log.warning("  Спецификация не найдена с конца — сканируем весь PDF")
     for i, page in enumerate(pdf.pages):
         text = page.extract_text() or ""
         if page_has_strong_marker(text):
