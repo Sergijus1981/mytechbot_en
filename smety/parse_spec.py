@@ -11,7 +11,7 @@ import re
 import logging
 from pathlib import Path
 
-import pdfplumber
+import pymupdf
 import pandas as pd
 
 PDF_PATH = Path("spec.pdf")
@@ -51,7 +51,7 @@ SECTIONS = [
 ]
 
 
-# НОВОЕ: словарь для исправления битой кодировки из pdfplumber/PyMuPDF
+# НОВОЕ: словарь для исправления битой кодировки из PDF
 FIX_CID = {
     "ǟ": "Ц", "Ȅ": "ы", "ǲ": "й", "ǯ": "ж", "Ǚ": "Р",
     "ǔ": "Ч", "Ȭ": "№", "ȁ": "ш", "Ȃ": "щ", "ȃ": "ъ",
@@ -203,20 +203,32 @@ def page_has_strong_marker(page_text):
 
 
 # ============ СТРОГАЯ ПРОВЕРКА ТАБЛИЦЫ ============
+def _extract_tables(page):
+    """Извлекает таблицы из страницы pymupdf."""
+    try:
+        tabs = page.find_tables()
+        if not tabs or not tabs.tables:
+            return []
+        return [t.extract() for t in tabs.tables]
+    except Exception as e:
+        log.debug("find_tables error: %s", e)
+        return []
+
+
 def page_has_spec_table(page):
     """Требует 5+ строк с данными (отсеивает оглавления)."""
-    tables = page.extract_tables() or []
+    tables = _extract_tables(page)
     for table in tables:
         if not table or len(table) < 5:
             continue
         for row in table[:5]:
-            row_text = " ".join(clean(c) for c in row).lower()
+            row_text = " ".join(clean(c) for c in row if c).lower()
             if ("поз" in row_text and "наименование" in row_text):
                 data_rows = 0
                 for r in table[1:12]:
                     if not r:
                         continue
-                    joined = " ".join(clean(c) for c in r)
+                    joined = " ".join(clean(c) for c in r if c)
                     if re.search(r"\d", joined) and len(joined) > 20:
                         data_rows += 1
                 if data_rows >= 5:
@@ -227,12 +239,12 @@ def page_has_spec_table(page):
 
 def find_spec_pages(pdf):
     spec_pages = []
-    total = len(pdf.pages)
+    total = len(pdf)
     
     # НОВОЕ: сначала ищем с КОНЦА (спецификация — обычно в конце РД)
     for i in range(total - 1, max(-1, total - 15), -1):
-        page = pdf.pages[i]
-        text = page.extract_text() or ""
+        page = pdf[i]
+        text = page.get_text() or ""
         if page_has_strong_marker(text):
             spec_pages.insert(0, i)
             continue
@@ -250,8 +262,9 @@ def find_spec_pages(pdf):
     
     # Fallback: сканируем с начала (медленно, но если ничего не нашли)
     log.warning("  Спецификация не найдена с конца — сканируем весь PDF")
-    for i, page in enumerate(pdf.pages):
-        text = page.extract_text() or ""
+    for i in range(total):
+        page = pdf[i]
+        text = page.get_text() or ""
         if page_has_strong_marker(text):
             spec_pages.append(i)
             continue
@@ -264,24 +277,24 @@ def extract_spec(pdf_path):
     items = []
     current_section = ""
 
-    with pdfplumber.open(pdf_path) as pdf:
+    with pymupdf.open(pdf_path) as pdf:
         spec_pages = find_spec_pages(pdf)
 
         if spec_pages:
             log.info("Найдены страницы со спецификацией: %s", [p + 1 for p in spec_pages])
-            pages_to_parse = [pdf.pages[i] for i in spec_pages]
+            pages_to_parse = [pdf[i] for i in spec_pages]
         else:
             log.warning("Спецификация не найдена — парсим все страницы (fallback)")
-            pages_to_parse = pdf.pages
+            pages_to_parse = [pdf[i] for i in range(len(pdf))]
 
         for pno, page in enumerate(pages_to_parse, 1):
-            page_text = fix_cid((page.extract_text() or "")).upper()
+            page_text = fix_cid((page.get_text() or "")).upper()
             page_sections = []
             for key, label in SECTIONS:
                 if key in page_text:
                     page_sections.append(label)
 
-            tables = page.extract_tables() or []
+            tables = _extract_tables(page)
             log.info("Страница %d: таблиц %d, разделов: %s", pno, len(tables), page_sections)
 
             for table in tables:
@@ -291,6 +304,7 @@ def extract_spec(pdf_path):
                 header_idx = None
                 cols = {}
                 for i, row in enumerate(table[:5]):
+                    row = [fix_cid(str(c)) if c else "" for c in row]
                     row_text = " ".join(clean(c) for c in row).lower()
                     if ("поз" in row_text and "наименование" in row_text):
                         header_idx = i
@@ -312,6 +326,7 @@ def extract_spec(pdf_path):
                     if not row:
                         continue
 
+                    row = [fix_cid(str(c)) if c else "" for c in row]
                     joined = " ".join(clean(c) for c in row)
                     sec = detect_section(joined)
                     if sec:
@@ -351,7 +366,7 @@ def extract_spec(pdf_path):
                     items.append(item)
 
                 # НОВОЕ: проверяем, есть ли NC-8000 в PDF, но пропущен в таблице
-                full_page_text = fix_cid(page.extract_text() or "")
+                full_page_text = fix_cid(page.get_text() or "")
                 has_nc8000 = "nc-8000" in full_page_text.lower()
                 already_has_nc8000 = any("nc-8000" in str(it.get("Тип/марка", "")).lower() or "nc-8000" in str(it.get("Наименование", "")).lower() for it in items)
                 if has_nc8000 and not already_has_nc8000:
