@@ -16,8 +16,20 @@ from bs4 import BeautifulSoup
 
 log = logging.getLogger(__name__)
 
-BASE = "https://www.etm.ru"
-SEARCH_URL = BASE + "/catalog?searchValue={q}"
+ETM_CITY_PATH = {"msk": "www", "spb": "spb", "nsk": "nsk", "vvo": "vlad", "ekb": "ekb", "kzn": "kzn", "krd": "krd", "nn": "nn", "sam": "sam", "chel": "chel", "perm": "perm", "ufa": "ufa", "vor": "vor", "kras": "kras"}
+
+
+def _base(region="msk"):
+    sub = ETM_CITY_PATH.get(region, "www")
+    return f"https://{sub}.etm.ru"
+
+
+BASE = _base("msk")
+def _search_url(region="msk"):
+    return _base(region) + "/catalog?searchValue={q}"
+
+
+SEARCH_URL = _search_url("msk")
 
 HEADERS = {"Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8"}
 PAUSE = 0.3
@@ -33,6 +45,7 @@ EXCLUDE_WORDS = [
     "брелок", "комплект брелок",
     "набор для монтажа", "набор монтажный",
     "саморез", "дюбель", "стяжка", "хомут", "маркер", "бирка",
+    "подшипник", "сальник", "манжета", "ремень", "цепь", "звездочка",
 ]
 
 LIGHT_KEYWORDS = ["светильник", "led", "лампа", "прожектор", "panel"]
@@ -150,8 +163,8 @@ def _extract_price_per_unit(html):
     return None, None
 
 
-def search(query, limit=8):
-    url = SEARCH_URL.format(q=quote_plus(query))
+def search(query, limit=8, region="msk"):
+    url = _search_url(region).format(q=quote_plus(query))
     try:
         r = _get(url)
     except Exception as e:
@@ -264,7 +277,7 @@ def _brand_matches(expected_brand, product_brand):
     return e in p or p in e
 
 
-def find_best(query, keywords=None, expected_brand=None, min_price=100):
+def find_best(query, keywords=None, expected_brand=None, min_price=100, region="msk"):
     """
     Ищет ЛУЧШИЙ результат:
     - Собирает все подходящие товары
@@ -303,10 +316,10 @@ def find_best(query, keywords=None, expected_brand=None, min_price=100):
     if not queries_to_try:
         return {"found": False, "reason": "no queries"}
 
-    log.info("ETM: brand=%r, min_price=%s, queries=%s", expected_brand, min_price, queries_to_try[:2])
+    log.info("ETM: region=%s, brand=%r, min_price=%s, queries=%s", region, expected_brand, min_price, queries_to_try[:2])
 
     for q in queries_to_try:
-        results = search(q, limit=8)
+        results = search(q, limit=8, region=region)
         if not results:
             continue
 

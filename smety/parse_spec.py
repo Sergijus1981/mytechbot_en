@@ -1,11 +1,12 @@
 """
-parse_spec.py v7
-Парсер спецификаций из PDF (ЭОМ, СС, СПС, СОУЭ, ЭМ).
+parse_spec.py v7.1
+Парсер спецификаций из PDF (АПС, СКУД, СВН, СОУЭ, ЭОМ).
 
-НОВОЕ в v7:
-- find_col_indices: распознаёт "Поз.", "№", "Позиц", "ед.изм" (с переносами)
-- find_pos_in_row: ищет позицию во ВСЕХ колонках (не только первых 5)
-- page_has_spec_table: требует 5+ строк с цифрами (отсеивает оглавления)
+НОВОЕ в v7.1:
+- detect_section: спецобработка "КАБЕЛЬНЫЕ ПРОДУКЦИЯ" (опечатка из PDF)
+- detect_region: определение региона по тексту PDF
+- Порог spec_pages = 5 (захватывает стр. 1)
+- Раздел переключается только если это НЕ данные (нет позиции)
 """
 import re
 import logging
@@ -19,9 +20,16 @@ except ImportError:
     HAS_PYMUPDF = False
 import pandas as pd
 
+try:
+    from . import regions
+except ImportError:
+    import regions
+
 PDF_PATH = Path("spec.pdf")
 OUT_XLSX = Path("spec_materials.xlsx")
 OUT_CSV = Path("spec_materials.csv")
+
+CURRENT_REGION = "msk"  # заполняется в extract_spec()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 log = logging.getLogger("parse_spec")
@@ -56,19 +64,16 @@ SECTIONS = [
 ]
 
 
-# НОВОЕ: словарь для исправления битой кодировки из PDF
 FIX_CID = {
-    # pymupdf-глифы (основной формат)
-    "ǟ": "Ц", "Ȅ": "ы", "ǲ": "й", "ǯ": "ж", "Ǚ": "Р",
-    "ǔ": "Ч", "Ȭ": "№", "ȁ": "ш", "Ȃ": "щ", "ȃ": "ъ",
-    "Ȇ": "э", "ȇ": "ю", "Ǎ": "Д", "Ǣ": "Ф", "Ǟ": "Х",
-    "ǽ": "ф", "Ǒ": "И", "ǋ": "В", "Ǧ": "Э", "Ǩ": "Я",
-    "ǉ": "А", "Ǌ": "Б", "ǚ": "С", "ǌ": "Л", "ǜ": "У",
-    "Ǘ": "О", "Ǡ": "0", "Ǹ": "З",
-    # (cid:XXX) формат
-    "(cid:459)": "В", "(cid:457)": "А", "(cid:36)": "А",
+    "ЖЯ": "Ц", "ЫД": "Ы", "Ж▓": "й", "Жп": "ж", "ЖЩ": "Р",
+    "ЖФ": "Ч", "Ым": "№", "ЫБ": "ш", "ЫВ": "й", "ЫГ": "ъ",
+    "ЫЖ": "э", "ЫЗ": "ю", "ЖН": "Д", "Жв": "ф", "ЖЮ": "е",
+    "Ж╜": "ф", "ЖС": "И", "ЖЛ": "Т", "Жж": "н", "Жи": "п",
+    "ЖЙ": "А", "ЖК": "Б", "ЖЪ": "б", "ЖМ": "Л", "ЖЬ": "У",
+    "ЖЧ": "Ю", "Жа": "0", "Ж╕": "З",
+    "(cid:459)": "Т", "(cid:457)": "А", "(cid:36)": "А",
     "(cid:52)": "К", "(cid:45)": "Б", "(cid:16)": "×",
-    "(cid:10)": "", "(cid:513)": "Вт", "(cid:44)": ",",
+    "(cid:10)": "", "(cid:513)": "Тт", "(cid:44)": ",",
     "(cid:46)": ".", "(cid:45)": "-",
 }
 
@@ -94,9 +99,21 @@ SPEC_MARKERS = [
 
 
 def detect_section(text):
+    """
+    Определяет раздел по тексту заголовка.
+    Спецобработка опечаток из PDF.
+    """
     if not text:
         return None
     t = re.sub(r"\s+", " ", text.upper())
+
+    if "КАБЕЛЬ" in t and "ПРОДУКЦ" in t:
+        return "Кабельная продукция"
+    if "КАБЕЛЕНЕСУЩ" in t:
+        return "Кабеленесущая продукция"
+    if "КАБЕЛЬ" in t and "ПРОВОД" in t:
+        return "Кабельная продукция"
+
     for key, label in SECTIONS:
         if key in t:
             return label
@@ -108,17 +125,19 @@ def detect_section_from_name(name):
         return None
     n = name.lower()
 
+    # КАБЕЛЬ — ПЕРВЫМ
+    if any(w in n for w in ["кабель", "ввг", "вбш", "ппг", "кис-", "кпс", "провод", "пугв", "utp", "ftp", "parlan"]):
+        return "Кабельная продукция"
+
     if any(w in n for w in ["датчик протеч", "контроллер протеч", "пожарная сигнализация"]):
         return "Слаботочка (СПС/СОУЭ)"
     if any(w in n for w in ["розетк", "выключател", "переключател"]):
         return "Электроустановочные изделия"
     if any(w in n for w in ["светильник", "лента", "люстра", "блок питания"]):
         return "Осветительное оборудование"
-    if any(w in n for w in ["кабель", "ввг", "вбш", "ппг", "кис-", "кпс", "провод", "пугв", "utp", "ftp", "parlan"]):
-        return "Кабельная продукция"
     if any(w in n for w in ["лоток", "труба", "гофр", "короб", "канал", "держател", "клипс", "лотк"]):
         return "Кабеленесущая продукция"
-    if any(w in n for w in ["щит", "шкаф", "панель", "грщ", "вру", "впу", "щр", "щс", "щк"]):
+    if any(w in n for w in ["щит", "шкаф", "панель", "грщ", "вру", "впу", "шр", "шс", "шк"]):
         return "Щитовое оборудование"
     if any(w in n for w in ["извещател", "оповещател", "табло", "сирена", "ипр", "аврора", "орфей"]):
         return "Слаботочка (СПС/СОУЭ)"
@@ -151,16 +170,13 @@ def parse_qty(s):
     return float(m.group()) if m else None
 
 
-# ============ ГИБКИЙ ПОИСК КОЛОНОК ============
 def find_col_indices(header_row):
-    """Гибкий поиск колонок: «Поз.», «№», «Позиц», «ед.изм» и т.д."""
     cols = {}
     for i, cell in enumerate(header_row):
         c = clean(cell).lower()
         if not c:
             continue
 
-        # Позиция: "позиц", "поз.", "поз ", "№", "n.", "n"
         if ("col_pos" not in cols and
             ("позиц" in c or c.startswith("поз") or c == "№" or c == "n." or c == "n" or c == "поз.")):
             cols["col_pos"] = i
@@ -170,7 +186,7 @@ def find_col_indices(header_row):
             cols["col_type"] = i
         elif "код" in c and "col_code" not in cols:
             cols["col_code"] = i
-        elif ("завод" in c or "поставщик" in c or "изготовител" in c) and "col_vendor" not in cols:
+        elif ("завод" in c or "поставщик" in c or "изготовитель" in c) and "col_vendor" not in cols:
             cols["col_vendor"] = i
         elif ("единица" in c or "ед. изм" in c or "ед.изм" in c or "ед измер" in c or c == "ед.") and "col_unit" not in cols:
             cols["col_unit"] = i
@@ -189,14 +205,10 @@ def get_cell(row, idx):
     return clean(row[idx])
 
 
-# ============ ГИБКИЙ ПОИСК ПОЗИЦИИ ============
 def find_pos_in_row(row, cols):
-    """Ищет позицию: сначала col_pos, потом во ВСЕХ колонках."""
-    # 1. Пробуем col_pos
     pos = get_cell(row, cols.get("col_pos"))
     if pos and re.match(r"^\d+(?:\.\d+)*$", pos):
         return pos
-    # 2. Fallback: ищем во ВСЕХ колонках
     for i in range(len(row)):
         c = clean(row[i])
         if re.match(r"^\d+(?:\.\d+)*$", c):
@@ -211,9 +223,57 @@ def page_has_strong_marker(page_text):
     return any(m in t for m in SPEC_MARKERS)
 
 
-# ============ СТРОГАЯ ПРОВЕРКА ТАБЛИЦЫ ============
+def detect_document_type(pdf):
+    """
+    Определяет тип документа:
+    - spec_table: табличная спецификация (Поз | Наименование | Ед | Кол-во)
+    - vedomost: ведомость (Наименование | Кол-во)
+    - text_list: текстовый список
+    """
+    if not pdf or len(pdf) == 0:
+        return "unknown"
+
+    pages_to_check = [0]
+    if len(pdf) > 1:
+        pages_to_check.append(len(pdf) - 1)
+
+    full_text = ""
+    for pno in pages_to_check:
+        try:
+            text = fix_cid(pdf[pno].get_text() or "")
+            full_text += " " + text
+        except Exception:
+            pass
+
+    low = full_text.lower()
+
+    # СНАЧАЛА — спецификация (строгие маркеры)
+    spec_markers = [
+        "спецификация", "позиция", "поз.", "ед. изм", "ед.изм",
+        "кол-во", "количество", "тип, марка",
+    ]
+    spec_score = sum(1 for m in spec_markers if m in low)
+    if spec_score >= 2:
+        return "spec_table"
+
+    # Ведомость (только если спецификации нет)
+    vedomost_markers = [
+        "перечень оборудования", "затоплен", "дефектная", "опись",
+    ]
+    if any(m in low for m in vedomost_markers):
+        return "vedomost"
+
+    if spec_score >= 1:
+        return "spec_table"
+
+    lines = [l for l in full_text.split("\n") if l.strip()]
+    if len(lines) > 20:
+        return "text_list"
+
+    return "spec_table"
+
+
 def _extract_tables(page):
-    """Извлекает таблицы из страницы pymupdf."""
     try:
         tabs = page.find_tables()
         if not tabs or not tabs.tables:
@@ -225,7 +285,6 @@ def _extract_tables(page):
 
 
 def page_has_spec_table(page):
-    """Требует 5+ строк с данными (отсеивает оглавления)."""
     tables = _extract_tables(page)
     for table in tables:
         if not table or len(table) < 5:
@@ -249,8 +308,7 @@ def page_has_spec_table(page):
 def find_spec_pages(pdf):
     spec_pages = []
     total = len(pdf)
-    
-    # НОВОЕ: сначала ищем с КОНЦА (спецификация — обычно в конце РД)
+
     for i in range(total - 1, max(-1, total - 15), -1):
         page = pdf[i]
         text = page.get_text() or ""
@@ -259,17 +317,14 @@ def find_spec_pages(pdf):
             continue
         if page_has_spec_table(page):
             spec_pages.insert(0, i)
-        # нашли достаточно — стоп
-        if len(spec_pages) >= 3:
+        if len(spec_pages) >= 5:
             log.info("  Спецификация найдена с конца (стр. %s)", [p + 1 for p in spec_pages])
             return spec_pages
-    
-    # Если с конца нашли хоть что-то — возвращаем
+
     if spec_pages:
         log.info("  Спецификация найдена с конца (стр. %s)", [p + 1 for p in spec_pages])
         return spec_pages
-    
-    # Fallback: сканируем с начала (медленно, но если ничего не нашли)
+
     log.warning("  Спецификация не найдена с конца — сканируем весь PDF")
     for i in range(total):
         page = pdf[i]
@@ -282,11 +337,107 @@ def find_spec_pages(pdf):
     return spec_pages
 
 
+def parse_vedomost(pdf):
+    """
+    Парсит ведомость: 2 колонки (Наименование | Кол-во).
+    Автонумерация позиций, ед.изм. — по названию.
+    """
+    items = []
+    auto_num = [0]
+
+    def next_num():
+        auto_num[0] += 1
+        return str(auto_num[0])
+
+    def detect_unit(name):
+        n = (name or "").lower()
+        if any(w in n for w in ["кабель", "провод", "труба", "лоток", "полоса", "пруток", "шина"]):
+            return "м"
+        return "шт"
+
+    for pno in range(len(pdf)):
+        page = pdf[pno]
+        tables = _extract_tables(page)
+        for table in tables:
+            if not table or len(table) < 2:
+                continue
+
+            header_row = None
+            header_idx = None
+            for i, row in enumerate(table[:5]):
+                row_text = " ".join(clean(c) for c in row if c).lower()
+                if "наимен" in row_text and (
+                    "кол" in row_text or "количество" in row_text or "шт" in row_text
+                ):
+                    header_row = row
+                    header_idx = i
+                    break
+
+            if header_idx is None:
+                continue
+
+            cols = find_col_indices(header_row)
+            if "col_qty" not in cols:
+                for i, cell in enumerate(header_row):
+                    c = clean(cell).lower()
+                    if "кол" in c or "шт" in c or "количество" in c:
+                        cols["col_qty"] = i
+                        break
+
+            if "col_name" not in cols or "col_qty" not in cols:
+                continue
+
+            log.info("  Ведомость: заголовок на строке %d, колонки %s", header_idx, cols)
+
+            for row in table[header_idx + 1:]:
+                if not row:
+                    continue
+                row = [fix_cid(str(c)) if c else "" for c in row]
+                name = get_cell(row, cols.get("col_name"))
+                qty = parse_qty(get_cell(row, cols.get("col_qty")))
+                if not name or len(name) < 4 or not qty:
+                    continue
+
+                pos = find_pos_in_row(row, cols) or next_num()
+                unit = detect_unit(name)
+
+                items.append({
+                    "Позиция": pos,
+                    "Раздел": detect_section_from_name(name) or "Ведомость",
+                    "Наименование": name,
+                    "Тип/марка": get_cell(row, cols.get("col_type")),
+                    "Код": get_cell(row, cols.get("col_code")),
+                    "Завод": get_cell(row, cols.get("col_vendor")),
+                    "Ед.": unit,
+                    "Кол-во": qty,
+                    "Масса, кг": None,
+                    "Примечание": "из ведомости",
+                })
+
+    return items
+
+
 def extract_spec(pdf_path):
+    global CURRENT_REGION
+
     items = []
     current_section = ""
 
     with pymupdf.open(pdf_path) as pdf:
+        # === РЕГИОН ===
+        try:
+            first_text = fix_cid(pdf[0].get_text() or "")
+            if len(pdf) > 1:
+                last_text = fix_cid(pdf[-1].get_text() or "")
+                full_for_region = first_text + " " + last_text
+            else:
+                full_for_region = first_text
+            CURRENT_REGION = regions.detect_region(full_for_region)
+            log.info("Регион: %s (%s)", CURRENT_REGION, regions.region_name(CURRENT_REGION))
+        except Exception as e:
+            log.warning("Не удалось определить регион: %s", e)
+            CURRENT_REGION = "msk"
+
         spec_pages = find_spec_pages(pdf)
 
         if spec_pages:
@@ -337,18 +488,27 @@ def extract_spec(pdf_path):
 
                     row = [fix_cid(str(c)) if c else "" for c in row]
                     joined = " ".join(clean(c) for c in row)
+
+                    pos = find_pos_in_row(row, cols)
+                    name = get_cell(row, cols.get("col_name"))
+
+                    # === РАЗДЕЛ из ячейки === (только если это НЕ данные)
                     sec = detect_section(joined)
-                    if sec:
+                    if sec and not pos:
+                        generic = {"Монтажные материалы", "Оборудование", "Прочее"}
+                        if current_section in generic or not current_section or sec not in generic:
+                            current_section = sec
+                            log.info("  Раздел (из ячейки): %s", sec)
+                        else:
+                            log.info("  Раздел (из ячейки) ПРОПУЩЕН (общий): %s", sec)
+                        continue
                         current_section = sec
                         log.info("  Раздел (из ячейки): %s", sec)
                         continue
 
-                    pos = find_pos_in_row(row, cols)
-                    name = get_cell(row, cols.get("col_name"))
                     if not name or len(name) < 3:
                         continue
                     if not pos:
-                        # Строка без позиции — берём, если есть имя
                         log.info("  Строка без позиции: %s", name[:50])
                         pos = ""
 
@@ -374,7 +534,7 @@ def extract_spec(pdf_path):
                     }
                     items.append(item)
 
-                # НОВОЕ: проверяем, есть ли NC-8000 в PDF, но пропущен в таблице
+                # NC-8000
                 full_page_text = fix_cid(page.get_text() or "")
                 has_nc8000 = "nc-8000" in full_page_text.lower()
                 already_has_nc8000 = any("nc-8000" in str(it.get("Тип/марка", "")).lower() or "nc-8000" in str(it.get("Наименование", "")).lower() for it in items)

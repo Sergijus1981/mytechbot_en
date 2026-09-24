@@ -16,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from sources import etm, petrovich, spec_dealers
+import regions as _reg
 
 IN_XLSX = Path("spec_materials.xlsx")
 OUT_XLSX = Path("smeta_eom_materials.xlsx")
@@ -58,6 +59,44 @@ BRAND_ALIASES = {
 # ===== Признаки «заказной сборки» =====
 # НОВОЕ: ручные цены для позиций, которых нет на ЭТМ
 MANUAL_PRICES = {
+    # ===== ЗАКАЗНЫЕ ЩИТЫ (0.0 = без цены) =====
+    "главный распределительный щит": 0.0,
+    "грщ7": 0.0,
+    "шкаф шинный распределительный": 0.0,
+    "шшр": 0.0,
+    "вводная панель в полной заводской готовности": 0.0,
+    "вп": 0.0,
+    "распределительная панель в полной заводской готовности": 0.0,
+    "рп": 0.0,
+    # ===== ЛОТКИ (Москва, 2026-09) =====
+    "лоток перфорированный, сечением 50/50": 350.0,
+    "лоток перфорированный, сечением 100/50": 450.0,
+    "лоток перфорированный, сечением 200/100": 850.0,
+    "лоток перфорированный, сечением 400/100": 1400.0,
+    "лоток лестничный, сечением 600/100": 2200.0,
+    "крышка с заземлением на лоток осн.100": 500.0,
+    "крышка с заземлением на лоток осн.200": 800.0,
+    "крышка с заземлением на лоток осн.400": 1400.0,
+    # ===== КАБЕЛЬ ППГнг(А)-HF (ЭТМ, Москва, 2026-09) =====
+    "ппгнг(а)-hf 1х240": 4544.0,
+    "ппгнг(а)-hf 1х185": 2408.0,
+    "ппгнг(а)-hf 1х120": 2499.0,
+    "ппгнг(а)-hf 1х95": 1987.0,
+    "ппгнг(а)-hf 1х70": 1439.0,
+    "ппгнг(а)-hf 5х35": 3837.0,
+    "ппгнг(а)-hf 5х25": 2810.0,
+    "ппгнг(а)-hf 5х16": 1725.0,
+    "ппгнг(а)-hf 5х10": 1097.0,
+    "ппгнг(а)-hf 5х6": 667.0,
+    "ппгнг(а)-hf 5х4": 451.0,
+    "ппгнг(а)-hf 5х2,5": 287.0,
+    "ппгнг(а)-hf 5х2.5": 287.0,
+    "ппгнг(а)-hf 5х1,5": 184.0,
+    "ппгнг(а)-hf 5х1.5": 184.0,
+    "ппгнг(а)-hf 3х2,5": 164.0,
+    "ппгнг(а)-hf 3х2.5": 164.0,
+    "ппгнг(а)-hf 3х1,5": 109.0,
+    "ппгнг(а)-hf 3х1.5": 109.0,
     "nc-8000": 39576,        # Parsec NC-8000
     "pr-x18": 23400,         # Parsec PR-X18
     "er1602": 21500,         # ESMART Stone ER1602
@@ -79,6 +118,8 @@ MANUAL_PRICES = {
 CUSTOM_ASSEMBLY_KEYWORDS = [
     "заказная сборка", "грщ", "шшр", "вру", "впу",
     "главный распределительный", "шкаф шинный",
+    "щит силовой", "щит навесной", "2щр", "1щр", "щрк", "щрв",
+    "распределительный щит",
 ]
 
 
@@ -209,11 +250,80 @@ def get_vendor(vendor_raw):
     return BRAND_ALIASES.get(v_norm, v)
 
 
+def _get_region():
+    try:
+        import parse_spec
+        return getattr(parse_spec, "CURRENT_REGION", "msk")
+    except Exception:
+        return "msk"
+
+
+def search_with_hubs(query, keywords, expected_brand=None, item_type="прочее"):
+    """
+    Ищет цену по цепочке хабов:
+    1. MANUAL_PRICES (приоритет)
+    2. Регион объекта
+    3. Ближний хаб → средний → Москва
+    Возвращает dict с полями price, source, region_used, coef, note.
+    """
+    import regions as _reg
+
+    # === 1. MANUAL_PRICES ===
+    _mk = None
+    _all = (str(query) + " " + str(keywords)).lower()
+    for _k in MANUAL_PRICES:
+        if _k in _all:
+            _mk = _k
+            break
+    if _mk:
+        _p = MANUAL_PRICES[_mk]
+        if _p == 0.0:
+            return {"found": False, "reason": "заказная сборка"}
+        return {
+            "found": True,
+            "source": "Ручная",
+            "name": str(query) + " (ручная цена)",
+            "price": MANUAL_PRICES[_mk],
+            "url": "",
+            "region_used": "msk",
+            "coef": 1.00,
+            "note": "проверенная цена",
+            "manual_key": _mk,
+        }
+
+    # === 2. Регион объекта ===
+    region_obj = _get_region()
+    hubs = _reg.get_hubs_for_region(region_obj)
+
+    r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100, region=region_obj)
+    if r.get("found"):
+        r["region_used"] = region_obj
+        r["coef"] = 1.00
+        r["note"] = "местный"
+        return r
+
+    # === 3. Хабы ===
+    for hub in hubs:
+        if hub == region_obj:
+            continue
+        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100, region=hub)
+        if r.get("found"):
+            coef = _reg.get_hub_coef(hub, region_obj, item_type)
+            r["price"] = round(r["price"] * coef, 2)
+            r["region_used"] = hub
+            r["coef"] = coef
+            r["source"] = "ЭТМ"
+            r["note"] = _reg.region_name(hub) + " + доставка (×" + str(coef) + ")"
+            return r
+
+    return {"found": False}
+
+
 def search_fast(query, keywords, expected_brand=None):
     """НОВОЕ v11: fallback без бренда, если с брендом 0."""
     results = []
     try:
-        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100)
+        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100, region=_get_region())
         if r.get("found"):
             results.append({"source": "ЭТМ", **r})
     except Exception as e:
@@ -223,7 +333,7 @@ def search_fast(query, keywords, expected_brand=None):
     if not results and expected_brand:
         try:
             log.info("    → fallback без бренда")
-            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100)
+            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100, region=_get_region())
             if r.get("found"):
                 results.append({"source": "ЭТМ", **r})
         except Exception as e:
@@ -237,7 +347,7 @@ def search_full(query, keywords, expected_brand=None):
     results = []
 
     try:
-        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100)
+        r = etm.find_best(query, keywords=keywords, expected_brand=expected_brand, min_price=100, region=_get_region())
         if r.get("found"):
             results.append({"source": "ЭТМ", **r})
     except Exception as e:
@@ -247,7 +357,7 @@ def search_full(query, keywords, expected_brand=None):
     if not results and expected_brand:
         try:
             log.info("    → fallback без бренда")
-            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100)
+            r = etm.find_best(query, keywords=keywords, expected_brand=None, min_price=100, region=_get_region())
             if r.get("found"):
                 results.append({"source": "ЭТМ", **r})
         except Exception as e:
@@ -290,7 +400,7 @@ def pick_price(results):
         chosen = prices[1]
     for r in results:
         if abs(r["price"] - chosen) < 0.01:
-            return chosen, r["source"], r.get("url", "")
+            return chosen, r.get("source", ""), r.get("url", "")
     return chosen, results[0]["source"], results[0].get("url", "")
 
 
@@ -364,37 +474,10 @@ def main():
         if expected_brand:
             log.info("    бренд (строго): %s", expected_brand)
 
-        results = search_fast(name, keywords, expected_brand=expected_brand) if fast \
-            else search_full(name, keywords, expected_brand=expected_brand)
-
-        # НОВОЕ: fallback на MANUAL_PRICES, если ничего не нашли
-        if not results:
-            _manual_key = None
-            # Проверяем имя, модель, артикул
-            for _cand in [name, model, code]:
-                if _cand:
-                    _k = str(_cand).strip().lower()
-                    if _k in MANUAL_PRICES:
-                        _manual_key = _k
-                        break
-            # Проверяем подстроки
-            if not _manual_key:
-                _all_text = f"{name} {model} {code}".lower()
-                for _k, _v in MANUAL_PRICES.items():
-                    if _k in _all_text:
-                        _manual_key = _k
-                        break
-            if _manual_key:
-                _price = MANUAL_PRICES[_manual_key]
-                results = [{
-                    "source": "Ручная",
-                    "found": True,
-                    "name": f"{name} (ручная цена)",
-                    "price": _price,
-                    "url": "",
-                    "brand": "",
-                }]
-                log.info("    MANUAL: %s → %s ₽", _manual_key, _price)
+        # === ПОИСК ПО ХАБАМ (MANUAL_PRICES → регион → хабы) ===
+        _item_type = _reg.detect_item_type(name)
+        _r = search_with_hubs(name, keywords, expected_brand=expected_brand, item_type=_item_type)
+        results = [_r] if _r.get("found") else []
         log.info("    найдено: %d", len(results))
 
         price, source, url = pick_price(results)
@@ -407,6 +490,14 @@ def main():
             log.info("    цена: не найдено")
             status = "нет цены"
 
+        _r_region = ""
+        _r_coef = 1.00
+        _r_note = ""
+        if results and isinstance(results[0], dict):
+            _r_region = results[0].get("region_used", "")
+            _r_coef = results[0].get("coef", 1.00)
+            _r_note = results[0].get("note", "")
+
         rows.append({
             "Позиция": pos, "Раздел": section,
             "Наименование": name, "Тип/марка": model, "Код": code,
@@ -414,7 +505,11 @@ def main():
             "Ед.": unit, "Кол-во": qty,
             "Цена ед., руб": price,
             "Сумма, руб": round(price * qty, 2) if price else None,
-            "Источник": source or "", "Ссылка": url or "",
+            "Источник": source or "",
+            "Регион цены": _reg.region_name(_r_region) if _r_region else "",
+            "Коэф.": _r_coef,
+            "Примечание": _r_note,
+            "Ссылка": url or "",
             "Статус": status,
         })
 
