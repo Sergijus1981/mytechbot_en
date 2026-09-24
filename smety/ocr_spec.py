@@ -15,16 +15,27 @@ def ocr_page_text(image, lang="rus"):
 
 
 def ocr_pdf_pages(pdf_path, dpi=300):
-    """Рендерит PDF в картинки и распознаёт текст."""
-    log.info("OCR: рендер PDF в картинки (dpi=%d)", dpi)
-    images = convert_from_path(pdf_path, dpi=dpi)
-    log.info("OCR: страниц %d", len(images))
+    """Рендерит PDF в картинки через pymupdf (без Poppler) и распознаёт текст."""
+    import pymupdf
+    from PIL import Image
+    import io as _io
 
+    log.info("OCR: рендер PDF через pymupdf (dpi=%d)", dpi)
+    doc = pymupdf.open(pdf_path)
     pages_text = []
-    for i, img in enumerate(images, 1):
+
+    zoom = dpi / 72.0
+    mat = pymupdf.Matrix(zoom, zoom)
+
+    for i, page in enumerate(doc, 1):
         log.info("OCR: страница %d", i)
+        pix = page.get_pixmap(matrix=mat)
+        img_data = pix.tobytes("png")
+        img = Image.open(_io.BytesIO(img_data))
         text = ocr_page_text(img)
         pages_text.append(text)
+
+    doc.close()
     return pages_text
 
 

@@ -258,7 +258,9 @@ def detect_document_type(pdf):
 
     # Ведомость (только если спецификации нет)
     vedomost_markers = [
-        "перечень оборудования", "затоплен", "дефектная", "опись",
+        "перечень оборудования", "перечень", "затоплен", "дефектная", "опись",
+        "бирка маркировочная", "наклейка", "гильза защитная", "патч-корд",
+        "ведомость", "томилинский", "ковровый",
     ]
     if any(m in low for m in vedomost_markers):
         return "vedomost"
@@ -417,6 +419,193 @@ def parse_vedomost(pdf):
     return items
 
 
+def parse_vedomost_ocr(pdf_path):
+    """
+    OCR-парсер ведомостей: текст → позиции.
+    Формат: <название> <число>
+    """
+    try:
+        import ocr_spec
+    except ImportError:
+        log.error("ocr_spec не найден")
+        return []
+
+    pages = ocr_spec.ocr_pdf_pages(pdf_path)
+    items = []
+    auto_num = [0]
+
+    skip_words = [
+        "дефектная", "ведомость", "на объекте", "адресу", "выявлено",
+        "затоплено", "перечень", "наименования", "директор", "заместитель",
+        "инженер", "ведущий", "макаренко", "чечеткин", "морозов", "шестаков",
+        "ооо", "ловител", "пуско-наладочные",
+    ]
+
+    for pno, text in enumerate(pages, 1):
+        log.info("OCR-ведомость: страница %d", pno)
+        for line in text.split("\n"):
+            line = line.strip()
+            if not line or len(line) < 5:
+                continue
+            low = line.lower()
+            if any(w in low for w in skip_words):
+                continue
+
+            # Ищем: название ... число (последнее число в строке)
+            # Формат: "Бирка маркировочная 281,000" или "Наклейка 2,000"
+            m = re.search(r"^(.*?)\s+([\d\s]+(?:[,.]\d+)?)\s*$", line)
+            if not m:
+                continue
+            name = m.group(1).strip(" .,:;-—/|")
+            qty_str = m.group(2).replace(" ", "").replace(",", ".")
+            try:
+                qty = float(qty_str)
+            except ValueError:
+                continue
+            if qty <= 0 or len(name) < 4:
+                continue
+
+            auto_num[0] += 1
+            # Ед. изм.
+            n = name.lower()
+            if any(w in n for w in ["кабель", "провод", "окгнг", "parlan", "ввгнг", "пв1", "пвс", "труба"]):
+                unit = "м"
+            else:
+                unit = "шт"
+
+            items.append({
+                "Позиция": str(auto_num[0]),
+                "Раздел": detect_section_from_name(name) or "СКС (ведомость)",
+                "Наименование": name,
+                "Тип/марка": "",
+                "Код": "",
+                "Завод": "",
+                "Ед.": unit,
+                "Кол-во": qty,
+                "Масса, кг": None,
+                "Примечание": "OCR из ведомости",
+            })
+
+    return items
+
+
+def parse_defect_ocr(pdf_path):
+    """
+    OCR-парсер дефектных ведомостей (сборная солянка).
+    """
+    try:
+        import ocr_spec
+    except ImportError:
+        log.error("ocr_spec не найден")
+        return []
+
+    pages = ocr_spec.ocr_pdf_pages(pdf_path)
+    items = []
+
+    skip_words = [
+        "дефектная", "ведомость", "на объекте", "адресу", "выявлено",
+        "затоплено", "перечень", "наименования", "директор", "заместитель",
+        "инженер", "ведущий", "макаренко", "чечеткин", "морозов",
+        "ловител", "пуско-наладочные", "смонтировано", "проектной",
+        "жк томилинский", "дoy", "перечень слаботочных",
+    ]
+
+    sections = ["ОЗДС", "БР", "СВН", "АСУД", "КСБ", "СС", "Безопасный регион"]
+
+    def norm_qty(qty_str):
+        """Нормализует кол-во: '1', 'Юш', 'Ош', '4', '2.' → число"""
+        if not qty_str:
+            return 1.0
+        s = qty_str.strip()
+        # Замена букв на цифры
+        s = s.replace("Ю", "10").replace("ю", "10")
+        s = s.replace("О", "0").replace("о", "0")
+        s = s.replace("З", "3").replace("з", "3")
+        # Извлекаем первое число
+        import re as _re
+        m = _re.search(r"\d+", s)
+        if m:
+            try:
+                return float(m.group())
+            except ValueError:
+                pass
+        return 1.0
+
+    def norm_name(name):
+        """Чистит название от мусора"""
+        import re as _re
+        # Убираем хвост "| 1ш |" или "  4ш"
+        name = _re.sub(r"\s*\|?\s*(\d+|[ЮюОо]ш)\s*[шщмШЩМ]?\S*\s*\|?\s*$", "", name)
+        name = name.strip(" .,:;-—/|[]")
+        return name
+
+    current_section = "Дефектная ведомость"
+
+    for pno, text in enumerate(pages, 1):
+        log.info("OCR-дефектная: страница %d", pno)
+        for line in text.split("\n"):
+            line = line.strip()
+            if not line or len(line) < 5:
+                continue
+            low = line.lower()
+            if any(w in low for w in skip_words):
+                continue
+
+            # Раздел
+            for sec in sections:
+                if sec.lower() in low and len(line) < 40:
+                    current_section = sec
+                    break
+
+            # Убираем мусор в начале
+            clean_line = re.sub(r"^[\s\[\|_®]+", "", line)
+            clean_line = re.sub(r"\s*\|\s*", " | ", clean_line)
+
+            # Ищем N. в начале (более гибко)
+            m = re.match(r"^(\d+)\s*[\.\s]\s*\|?\s*(.+)$", clean_line)
+            if not m:
+                continue
+
+            num = m.group(1)
+            name_raw = m.group(2)
+
+            # Ищем кол-во в конце строки: "| 1ш |" или " 4ш" или " Юш"
+            qty_match = re.search(
+                r"\|?\s*(\d+|[ЮюОо])\s*[шщмШЩМ]\S*\s*\|?\s*$",
+                name_raw
+            )
+            if qty_match:
+                qty = norm_qty(qty_match.group(1))
+                # Проверяем единицу — м или шт
+                unit_match = re.search(r"[шщмШЩМ]", qty_match.group(0))
+                unit_char = unit_match.group().lower() if unit_match else "ш"
+                unit = "м" if unit_char == "м" else "шт"
+                name = name_raw[:qty_match.start()].strip(" .,:;-—/|[]")
+            else:
+                qty = 1.0
+                unit = "шт"
+                name = norm_name(name_raw)
+
+            name = name.strip(" .,:;-—/|[]")
+            if not name or len(name) < 5:
+                continue
+
+            items.append({
+                "Позиция": str(num),
+                "Раздел": current_section,
+                "Наименование": name,
+                "Тип/марка": "",
+                "Код": "",
+                "Завод": "",
+                "Ед.": unit,
+                "Кол-во": qty,
+                "Масса, кг": None,
+                "Примечание": "OCR",
+            })
+
+    return items
+
+
 def extract_spec(pdf_path):
     global CURRENT_REGION
 
@@ -437,6 +626,12 @@ def extract_spec(pdf_path):
         except Exception as e:
             log.warning("Не удалось определить регион: %s", e)
             CURRENT_REGION = "msk"
+
+        # === АВТОВЫБОР ПАРСЕРА ===
+        doc_type = detect_document_type(pdf)
+        log.info("Тип документа: %s", doc_type)
+        if doc_type in ("vedomost", "text_list"):
+            return parse_vedomost(pdf)
 
         spec_pages = find_spec_pages(pdf)
 
