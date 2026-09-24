@@ -336,6 +336,10 @@ SOURCES = [
     ("https://elektrik52.ru/prajs-list-elektrika/", "elektrik52_nn", "nn"),
     # === СПб ===
     ("https://10kvt.ru/print-all-price.php", "10kvt", "spb"),
+    # === Уфа ===
+    ("https://elektrik-ufa.ru/price/", "elektrik_ufa", "ufa"),
+    # === Самара ===
+    ("https://elektrik-samara.ru/price/", "elektrik_samara", "sam"),
     # === Владивосток ===
     ("https://vladivostok.masterabyta.ru/prajs-list-na-elektromontazhnye-raboty", "masterabyta_vvo", "vvo"),
 ]
