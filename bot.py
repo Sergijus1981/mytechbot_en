@@ -765,14 +765,13 @@ def get_main_menu_keyboard(lang):
         buttons.append([InlineKeyboardButton(T[lang].get('smeta_button', '📊 Составить смету'), callback_data="menu_smeta")])
     buttons.append([InlineKeyboardButton(T[lang].get('check_photo_menu', '📷 Check photo'), callback_data="menu_photo")])
     buttons.append([InlineKeyboardButton(T[lang].get('balance_menu', '💰 Balance'), callback_data="menu_balance")])
-    buttons.append([InlineKeyboardButton(T[lang].get('buy_menu', '💳 Buy stars'), callback_data="buy_checks")])
+    # ВРЕМЕННО ОТКЛЮЧЕНО: покупка звёзд
     buttons.append([InlineKeyboardButton(T[lang].get('change_lang', '🌐 Change language'), callback_data="change_lang")])
     return InlineKeyboardMarkup(buttons)
 
 
 def get_buy_keyboard(lang):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(T[lang]['buy_button'], callback_data="buy_checks")],
         [InlineKeyboardButton(T[lang].get('back_to_menu', '« Back to menu'), callback_data="main_menu")]
     ])
 
@@ -1035,12 +1034,13 @@ async def button_callback(update, context):
             return
 
         if data == "buy_checks":
-            free, paid = get_balance(user_id)
-            balance_line = f"\n\n💰 {t['balance_text'].format(free=free, paid=paid)}"
             await safe_edit(query,
-                f"{t.get('buy_welcome', '💳 Top up balance')}{balance_line}\n\n"
-                f"⭐ Telegram Stars — мгновенно\n💎 USDT TRC20 — для крупных сумм",
-                reply_markup=get_buy_packages_keyboard(lang))
+                "⏸ Пополнение баланса временно недоступно.\n\n"
+                "📊 Составление смет — работает.\n"
+                "📷 Проверка фото — работает.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(t.get('back_to_menu', '« Назад'), callback_data="main_menu")]
+                ]))
             return
 
         if data.startswith("buy_pkg_"):

@@ -1,9 +1,6 @@
 """
-make_smeta_works.py v9
-Расчёт работ по спецификации.
-- Захардкоженные цены (кабели, лотки, щиты, муфты) — для ЭОМ 2.3
-- НОВОЕ: WORKS_PRICES — расценки по ключевым словам для любых позиций
-- Монтаж розеток, выключателей, светильников, извещателей, оповещателей
+make_smeta_works.py v10
+Расчёт работ + ПНР отдельно
 """
 import re
 from prices_aps import get_montage_price as aps_montage, get_pnr_price as aps_pnr, get_cable_price as aps_cable
@@ -22,10 +19,11 @@ log = logging.getLogger("make_smeta_works")
 
 MARKUP_MATERIALS = 0.20
 MARKUP_WORKS = 0.15
+PNR_COEF = 0.10  # НОВОЕ: ПНР = 10% от материалов и оборудования
 
-COEF_HEIGHT = 1.0  # высота (от 3 м) — не учтено
-COEF_ACTIVE = 1.0  # стеснённые условия — не учтено
-COEF_NIGHT = 1.0  # ночь — не учтено
+COEF_HEIGHT = 1.0
+COEF_ACTIVE = 1.0
+COEF_NIGHT = 1.0
 COEF_TOTAL = COEF_HEIGHT * COEF_ACTIVE * COEF_NIGHT
 
 VAT = 0.20
@@ -33,7 +31,6 @@ COEF_TURNS = 0.07
 FEE_CABLE_TERMINATION = 150_000
 
 
-# ===== Захардкоженные цены (для ЭОМ 2.3) =====
 CABLE_PRICES = {
     "1х240": 585, "1х185": 530, "1х120": 530, "1х95": 530, "1х70": 365,
     "5х35": 255, "5х25": 255, "5х16": 190, "5х10": 127, "5х6": 127,
@@ -63,26 +60,18 @@ COUPLING_PRICES = {
 PULL_PRICE = 70
 
 
-# ===== НОВОЕ: расценки по ключевым словам =====
 def normalize_key(name):
-    """Нормализует название работы → ключ для базы."""
-    import re
     n = str(name).lower()
     n = re.sub(r"[\s\-_.,\(\)\"']", "", n)
     return n
 
 
 def find_in_db(work_name, region):
-    """
-    Ищет цену работы в prices_works.db по региону.
-    Возвращает (price, unit, source) или None.
-    """
     import sqlite3
     try:
         conn = sqlite3.connect("prices_works.db")
         cur = conn.cursor()
         key = normalize_key(work_name)
-        # 1. Точное совпадение
         cur.execute("""
             SELECT price, unit, source FROM prices
             WHERE work_key = ? AND region = ?
@@ -92,7 +81,6 @@ def find_in_db(work_name, region):
         if row:
             conn.close()
             return row
-        # 2. По подстроке (длинные ключи — приоритет)
         cur.execute("""
             SELECT price, unit, source FROM prices
             WHERE ? LIKE '%' || work_key || '%' AND region = ?
@@ -107,7 +95,6 @@ def find_in_db(work_name, region):
 
 
 WORKS_PRICES = [
-    # ===== КАБЕЛЬ (вторая с конца) =====
     ("5х240", 640, "Прокладка кабеля 5х240"),
     ("5х185", 220, "Прокладка кабеля 5х185"),
     ("5х150", 480, "Прокладка кабеля 5х150"),
@@ -124,7 +111,6 @@ WORKS_PRICES = [
     ("5х1,5", 100, "Прокладка кабеля 5х1,5"),
     ("3х2,5", 90, "Прокладка кабеля 3х2,5"),
     ("3х1,5", 70, "Прокладка кабеля 3х1,5"),
-    # ===== ЛОТКИ =====
     ("лоток 600/100", 894, "Монтаж лотка 600/100"),
     ("лоток 400/100", 480, "Монтаж лотка 400/100"),
     ("лоток 200/100", 320, "Монтаж лотка 200/100"),
@@ -136,11 +122,9 @@ WORKS_PRICES = [
     ("угол лотка 200", 95, "Угол лотка 200"),
     ("кронштейн лотка 400", 95, "Кронштейн 400"),
     ("кронштейн лотка 200", 75, "Кронштейн 200"),
-    # ===== МУФТЫ =====
     ("муфта 240", 5755, "Монтаж концевой муфты 240"),
     ("муфта 150", 4755, "Монтаж концевой муфты 150"),
     ("муфта 95", 3755, "Монтаж концевой муфты 95"),
-    # ===== ЩИТЫ =====
     ("главный распределительный", 300000, "Монтаж ГРЩ (с ПНР)"),
     ("грщ", 300000, "Монтаж ГРЩ (с ПНР)"),
     ("шкаф шинный", 150000, "Монтаж ШШР"),
@@ -149,26 +133,22 @@ WORKS_PRICES = [
     ("щит силовой", 10000, "Монтаж щита силового"),
     ("щит навесной", 10000, "Монтаж щита навесного"),
     ("щр", 10000, "Монтаж щита распределительного"),
-    # ===== РОЗЕТКИ, ВЫКЛЮЧАТЕЛИ =====
     ("розетк", 288, "Монтаж розетки"),
     ("выключател", 265, "Монтаж выключателя"),
-    # ===== СВЕТИЛЬНИКИ =====
     ("светильник", 1250, "Монтаж светильника"),
     ("люстра", 2500, "Монтаж люстры"),
-    # ===== ПРОЧЕЕ =====
     ("труба", 55, "Прокладка трубы"),
     ("кабель", 150, "Прокладка кабеля"),
     ("шпилька", 55, "Монтаж шпильки"),
     ("болт", 5, "Монтаж болта"),
 ]
 
+
 def find_work_price(name):
-    """Ищет расценку по ключевому слову в наименовании."""
     if not name:
         return None, None
     n = name.lower()
 
-    # === 1. АПС / СОУЭ ===
     p = aps_montage(name)
     if p:
         return p, "АПС: монтаж"
@@ -176,7 +156,6 @@ def find_work_price(name):
     if p:
         return p, "АПС: ПНР"
 
-    # === 2. СКУД ===
     p = skud_price(name)
     if p:
         return p, "СКУД: монтаж"
@@ -190,12 +169,10 @@ def find_work_price(name):
     if p:
         return p, "СКУД: видео"
 
-    # === 3. WORKS_PRICES (приоритет для ЭОМ) ===
     for key, price, work_name in WORKS_PRICES:
         if key in n:
             return price, work_name
 
-    # === 4. БАЗА prices_works.db (fallback) ===
     try:
         import parse_spec
         region = getattr(parse_spec, "CURRENT_REGION", "msk")
@@ -229,7 +206,6 @@ def calc_works(df):
     works = []
     used_pos = set()
 
-    # 1. Захардкоженные работы (приоритет)
     for _, r in df.iterrows():
         pos = str(r["Позиция"])
         name = str(r["Наименование"])
@@ -290,7 +266,6 @@ def calc_works(df):
                     added = True
                     break
 
-        # Если не добавили захардкоженное — пробуем WORKS_PRICES
         if not added:
             rate, work_name = find_work_price(name)
             if rate and work_name:
@@ -337,17 +312,24 @@ def main():
     materials_markup = materials_total * MARKUP_MATERIALS
     materials_with_markup = materials_total + materials_markup
 
-    subtotal = materials_with_markup + works_total
+    # ===== НОВОЕ: ПНР =====
+    pnr_amount = round(materials_total * PNR_COEF, 2)
+    log.info("ПНР (10%% от материалов и оборудования): %.2f руб", pnr_amount)
+
+    # ===== Подытог с ПНР =====
+    subtotal = materials_with_markup + works_total + pnr_amount
     vat_amount = subtotal * VAT
     grand_total = subtotal + vat_amount
 
     log.info("Материалы с наценкой: %.2f", materials_with_markup)
     log.info("Работы с наценкой: %.2f", works_total)
+    log.info("ПНР: %.2f", pnr_amount)
     log.info("Подытог: %.2f", subtotal)
     log.info("НДС 20%%: %.2f", vat_amount)
     log.info("=== ВСЕГО С НДС: %.2f ===", grand_total)
 
     with pd.ExcelWriter(OUT_XLSX, engine="openpyxl") as writer:
+        # === Лист «Материалы» ===
         materials_rows = []
         for _, r in df.iterrows():
             materials_rows.append({
@@ -379,6 +361,7 @@ def main():
         })
         pd.DataFrame(materials_rows).to_excel(writer, sheet_name="Материалы", index=False)
 
+        # === Лист «Работы» ===
         works_rows = list(works)
         works_rows.append({
             "Позиция": "", "Работа": "ИТОГО работы (база)",
@@ -412,6 +395,7 @@ def main():
         })
         pd.DataFrame(works_rows).to_excel(writer, sheet_name="Работы", index=False)
 
+        # === Лист «Сводка» ===
         summary_rows = [
             {"Статья": "МАТЕРИАЛЫ", "Сумма, руб": ""},
             {"Статья": "Материалы (без наценки)", "Сумма, руб": round(materials_total, 2)},
@@ -427,8 +411,12 @@ def main():
             {"Статья": "Наценка на работы (15%)", "Сумма, руб": round(works_markup, 2)},
             {"Статья": "Итого работы", "Сумма, руб": round(works_total, 2)},
             {"Статья": "", "Сумма, руб": ""},
+            {"Статья": "ПНР", "Сумма, руб": ""},
+            {"Статья": "ПНР (10% от материалов и оборудования)", "Сумма, руб": round(pnr_amount, 2)},
+            {"Статья": "Итого ПНР", "Сумма, руб": round(pnr_amount, 2)},
+            {"Статья": "", "Сумма, руб": ""},
             {"Статья": "ИТОГО ПО СМЕТЕ", "Сумма, руб": ""},
-            {"Статья": "Материалы + Работы (подытог)", "Сумма, руб": round(subtotal, 2)},
+            {"Статья": "Материалы + Работы + ПНР (подытог)", "Сумма, руб": round(subtotal, 2)},
             {"Статья": "НДС 20%", "Сумма, руб": round(vat_amount, 2)},
             {"Статья": "=== ВСЕГО С НДС ===", "Сумма, руб": round(grand_total, 2)},
             {"Статья": "", "Сумма, руб": ""},
