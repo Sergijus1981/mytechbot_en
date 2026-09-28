@@ -764,8 +764,6 @@ def get_main_menu_keyboard(lang):
     if lang == "ru":
         buttons.append([InlineKeyboardButton(T[lang].get('smeta_button', '📊 Составить смету'), callback_data="menu_smeta")])
     buttons.append([InlineKeyboardButton(T[lang].get('check_photo_menu', '📷 Check photo'), callback_data="menu_photo")])
-    buttons.append([InlineKeyboardButton(T[lang].get('balance_menu', '💰 Balance'), callback_data="menu_balance")])
-    # ВРЕМЕННО ОТКЛЮЧЕНО: покупка звёзд
     buttons.append([InlineKeyboardButton(T[lang].get('change_lang', '🌐 Change language'), callback_data="change_lang")])
     return InlineKeyboardMarkup(buttons)
 
@@ -1146,10 +1144,14 @@ async def start_command(update, context):
     user_id = update.effective_user.id
     register_user(user_id)
     lang = get_lang(user_id)
-    free, paid = get_balance(user_id)
-    balance_line = f"\n\n💰 {T[lang]['balance_text'].format(free=free, paid=paid)}"
+    
+    disclaimer = ""
+    if lang == "ru":
+        disclaimer = "\n\n⚠️ <b>Важно:</b> Сервис предоставляет информационные услуги. Результат носит справочный характер и не является проектной или сметной документацией. Все решения принимаются вами самостоятельно."
+    
     await update.message.reply_text(
-        T[lang]['welcome'] + balance_line,
+        T[lang]['welcome'] + disclaimer,
+        parse_mode="HTML",
         reply_markup=get_main_menu_keyboard(lang))
 
 
@@ -1259,10 +1261,6 @@ async def buy_command(update, context):
     t = T[lang]
     free, paid = get_balance(user_id)
     balance_line = f"\n\n💰 {t['balance_text'].format(free=free, paid=paid)}"
-    await update.message.reply_text(
-        f"{t.get('buy_welcome', '💳 Top up balance')}{balance_line}\n\n"
-        f"⭐ Telegram Stars — мгновенно\n💎 USDT TRC20 — для крупных сумм",
-        reply_markup=get_buy_packages_keyboard(lang))
 
 
 async def smeta_command(update, context):
